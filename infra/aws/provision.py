@@ -332,7 +332,100 @@ def deploy() -> None:
     log(f"deployed — https://portal.{DOMAIN}")
 
 
-STEPS = {"network": network, "cert": cert, "bake": bake, "portal": portal, "deploy": deploy}
+
+STUDIO_TYPE = os.environ.get("STUDIO_TYPE", "t3.xlarge")
+
+
+def _env_file(path: Path) -> dict[str, str]:
+    out = {}
+    if path.exists():
+        for line in path.read_text().splitlines():
+            if "=" in line and not line.lstrip().startswith("#"):
+                k, v = line.split("=", 1)
+                out[k.strip()] = v.strip()
+    return out
+
+
+def _set_env(path: Path, updates: dict[str, str]) -> None:
+    """Set KEY=value lines in an env file, keeping every other line as it is."""
+    lines = path.read_text().splitlines() if path.exists() else []
+    seen = set()
+    for i, line in enumerate(lines):
+        key = line.split("=", 1)[0].strip()
+        if key in updates:
+            lines[i] = f"{key}={updates[key]}"
+            seen.add(key)
+    lines += [f"{k}={v}" for k, v in updates.items() if k not in seen]
+    path.write_text("\n".join(lines) + "\n")
+    path.chmod(0o600)
+
+
+def studio_instance() -> dict | None:
+    r = ec2.describe_instances(Filters=[{"Name": "tag:Name", "Values": ["factory-workshop-studio"]},
+                                        {"Name": "instance-state-name", "Values": ["pending", "running", "stopped"]}])
+    found = [i for res in r["Reservations"] for i in res["Instances"]]
+    return found[0] if found else None
+
+
+def studio() -> None:
+    """Rasa Studio 2.0 on its own host: Review shows every foreman and travel-agent conversation.
+    Then points the portal at it (STUDIO_KAFKA_URL, STUDIO_UPSTREAM); run `deploy` afterwards."""
+    import secrets as _secrets
+    portal_sg, vm_sg = network()
+    me = f"{my_ip()}/32"
+    gid = ensure_sg("factory-workshop-studio", "Agent Factory workshop Rasa Studio")
+    allow(gid, [{"IpProtocol": "tcp", "FromPort": 4000, "ToPort": 4000, "UserIdGroupPairs": [{"GroupId": portal_sg}]},
+                {"IpProtocol": "tcp", "FromPort": 29092, "ToPort": 29092, "UserIdGroupPairs": [{"GroupId": vm_sg}]},
+                {"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "IpRanges": [{"CidrIp": me}]}])
+    inst = studio_instance()
+    if inst is None:
+        user_data = "#!/bin/bash\ncurl -fsSL https://get.docker.com | sh\nusermod -aG docker ubuntu\n"
+        inst = ec2.run_instances(ImageId=ubuntu_ami(), InstanceType=STUDIO_TYPE, MinCount=1, MaxCount=1,
+                                 KeyName="factory-workshop", SecurityGroupIds=[gid], SubnetId=workshop_vpc()[1][0],
+                                 UserData=user_data,
+                                 BlockDeviceMappings=[{"DeviceName": "/dev/sda1", "Ebs": {"VolumeSize": 60, "VolumeType": "gp3"}}],
+                                 TagSpecifications=[{"ResourceType": "instance", "Tags": tags("factory-workshop-studio")}])["Instances"][0]
+        log(f"studio host {inst['InstanceId']} launching")
+    iid = inst["InstanceId"]
+    ec2.get_waiter("instance_running").wait(InstanceIds=[iid])
+    inst = ec2.describe_instances(InstanceIds=[iid])["Reservations"][0]["Instances"][0]
+    private, public = inst["PrivateIpAddress"], inst.get("PublicIpAddress")
+    if not public:
+        sys.exit("Studio host has no public IP for SSH.")
+
+    local = _env_file(REPO / ".env.local") | _env_file(REPO / ".env")
+    env_path = REPO / "infra" / "studio" / ".env"
+    current = _env_file(env_path)
+    _set_env(env_path, {
+        "DOMAIN": DOMAIN, "PRIVATE_IP": private, "STUDIO_IMAGE_TAG": current.get("STUDIO_IMAGE_TAG", "2.0.0.dev5"),
+        "DB_PASS": current.get("DB_PASS") or _secrets.token_hex(16),
+        "AUTH_SECRET": current.get("AUTH_SECRET") or _secrets.token_hex(32),
+        "STUDIO_ENCRYPTION_KEY": current.get("STUDIO_ENCRYPTION_KEY") or _secrets.token_urlsafe(32)[:43],
+        "INITIAL_ADMIN_EMAIL": current.get("INITIAL_ADMIN_EMAIL", "admin@factory-workshop.example"),
+        "INITIAL_ADMIN_PASSWORD": current.get("INITIAL_ADMIN_PASSWORD") or _secrets.token_urlsafe(18),
+        "RASA_PRO_LICENSE": local.get("RASA_LICENSE", ""), "OPENAI_API_KEY": local.get("OPENAI_API_KEY", ""),
+    })
+    ssh = ["-i", str(KEY_PATH), "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=10"]
+    for _ in range(60):  # wait for SSH and Docker from user data
+        if subprocess.run(["ssh", *ssh, f"ubuntu@{public}", "sudo docker info >/dev/null 2>&1"]).returncode == 0:
+            break
+        time.sleep(10)
+    else:
+        sys.exit("Docker never came up on the studio host.")
+    template = (REPO / "infra" / "studio" / "config.template.js").read_text()
+    (REPO / "infra" / "studio" / "config.js").write_text(template.replace("__STUDIO_URL__", f"https://studio.{DOMAIN}"))
+    subprocess.run(["rsync", "-az", "-e", "ssh " + " ".join(ssh), "infra/studio/docker-compose.yml",
+                    "infra/studio/.env", "infra/studio/config.js", f"ubuntu@{public}:~/studio/"], cwd=REPO, check=True)
+    subprocess.run(["ssh", *ssh, f"ubuntu@{public}",
+                    "cd ~/studio && mkdir -p rasa-pro/models rasa-pro/logs rasa-pro/builder && sudo docker compose up -d"],
+                   check=True)
+    _set_env(REPO / "infra" / "portal" / ".env",
+             {"STUDIO_KAFKA_URL": f"{private}:29092", "STUDIO_UPSTREAM": f"{private}:4000"})
+    log(f"studio host {iid} ({private}); https://studio.{DOMAIN} once the portal is redeployed. "
+        f"Admin: see infra/studio/.env")
+
+
+STEPS = {"network": network, "cert": cert, "bake": bake, "portal": portal, "deploy": deploy, "studio": studio}
 
 if __name__ == "__main__":
     step = sys.argv[1] if len(sys.argv) > 1 else ""

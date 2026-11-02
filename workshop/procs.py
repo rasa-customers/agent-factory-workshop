@@ -84,6 +84,8 @@ def up() -> int:
     dash_dir = WORKSPACE / "latest-dashboard"
     if not dash_dir.exists():
         dash_dir = REPO / "templates" / "dashboard"
+    from workshop.studio import write_integrations
+    write_integrations(REPO / "foreman")
     print("Training the foreman (first run takes a few seconds)…")
     subprocess.run([rasa, "train"], cwd=REPO / "foreman", capture_output=True, env=dict(os.environ))
 

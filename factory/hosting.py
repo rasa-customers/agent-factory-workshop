@@ -88,6 +88,8 @@ class ArtifactHost:
         else:
             await self.ensure_dashboard()
             rasa = str(Path(sys.executable).with_name("rasa"))
+            from workshop.studio import add_event_broker
+            add_event_broker(root)
             trained = subprocess.run([rasa, "train"], cwd=root, capture_output=True, text=True, env=dict(os.environ))
             if trained.returncode != 0:
                 raise StartFailed("The agent did not train (`rasa train` failed). Errors:\n"

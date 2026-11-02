@@ -84,3 +84,10 @@ def test_editor_skips_the_virtualenv_and_background_checks():
     assert EDITOR["files.exclude"]["**/.venv"] is True
     assert EDITOR["extensions.autoCheckUpdates"] is False and EDITOR["git.enabled"] is False
     assert EDITOR["workbench.startupEditor"] == "none"
+
+
+def test_studio_route_only_when_studio_is_set_up(monkeypatch):
+    monkeypatch.delenv("STUDIO_UPSTREAM", raising=False)
+    assert "studio." not in render_caddyfile([], DOMAIN)
+    monkeypatch.setenv("STUDIO_UPSTREAM", "10.77.1.9:4000")
+    assert "http://studio.fw.example {\n  reverse_proxy 10.77.1.9:4000" in render_caddyfile([], DOMAIN)

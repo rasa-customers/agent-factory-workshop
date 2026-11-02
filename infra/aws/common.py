@@ -11,7 +11,7 @@ PARENT_ZONE = "playground-cse.rasa-dev.io."
 FORBIDDEN_ZONE = "agent-factory.playground-cse.rasa-dev.io."  # belongs to another project — never touch
 DOMAIN = "factory-workshop.playground-cse.rasa-dev.io"
 TAG = {"Key": "project", "Value": "factory-workshop"}
-VM_TYPE = os.environ.get("VM_TYPE", "t3.large")
+VM_TYPE = os.environ.get("VM_TYPE", "t3.xlarge")  # 4 vCPU: builds, checks and training share it
 PORTAL_TYPE = os.environ.get("PORTAL_TYPE", "t3.large")
 VM_PORTS = (8080, 5005, 5006, 8600, 8800)
 

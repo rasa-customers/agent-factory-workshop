@@ -48,7 +48,7 @@ def main() -> None:
     print(f"terminated {len(vms)} cloud machines")
     if not everything:
         return
-    for i in instances("factory-workshop-portal"):
+    for i in instances("factory-workshop-studio") + instances("factory-workshop-portal"):
         ec2.terminate_instances(InstanceIds=[i["InstanceId"]])
         ec2.get_waiter("instance_terminated").wait(InstanceIds=[i["InstanceId"]])
         print(f"terminated portal host {i['InstanceId']}")

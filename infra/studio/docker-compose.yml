@@ -1,0 +1,98 @@
+# Rasa Studio 2.0 for the workshop: Review shows every foreman and travel-agent conversation.
+# Adapted from Studio's own infrastructure/docker-compose. Run by `python -m infra.aws.provision studio`.
+# Only Kafka (29092, from workshop machines) and Studio (4000, from the portal's Caddy) are reachable.
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.8.0
+    restart: unless-stopped
+    ports: ["29092:29092"]
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://${PRIVATE_IP}:29092
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      CLUSTER_ID: "Y2hhcHRnLXNpbXBsZS1jbHVzdGVy"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes: [kafka-data:/var/lib/kafka/data]
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "kafka:9092", "--list"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+
+  database:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes: [studio-db-data:/var/lib/postgresql/data/pgdata]
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: studio
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio -d studio"]
+      interval: 5s
+      retries: 10
+      start_period: 10s
+
+  studio:
+    image: europe-west3-docker.pkg.dev/rasa-releases/studio/studio:${STUDIO_IMAGE_TAG:-2.0.0.dev5}
+    restart: unless-stopped
+    depends_on:
+      database: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    ports: ["4000:4000"]
+    # Studio's compose image bakes http://localhost:4000 into the browser app; point it at our hostname.
+    volumes: ["./config.js:/usr/src/app/webclient/config.js:ro"]
+    environment:
+      RUN_MIGRATIONS_ON_STARTUP: "true"
+      DB_HOST: database
+      DB_USER: studio
+      DB_PASS: ${DB_PASS}
+      DB_NAME: studio
+      DATABASE_URL: postgresql://studio:${DB_PASS}@database:5432/studio?schema=public
+      API_URL: https://studio.${DOMAIN}/api
+      WEB_CLIENT_URL: https://studio.${DOMAIN}
+      BETTER_AUTH_BASE_URL: https://studio.${DOMAIN}
+      MS_API_URL: http://model-service:8000
+      AUTH_SECRET: ${AUTH_SECRET}
+      STUDIO_ENCRYPTION_KEY: ${STUDIO_ENCRYPTION_KEY}
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD}
+      KAFKA_BROKER_ADDRESS: kafka:9092
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 10s
+      retries: 10
+      start_period: 60s
+
+  model-service:
+    image: europe-west3-docker.pkg.dev/rasa-releases/rasa-pro/rasa-pro:3.16.0
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["python -m rasa.model_service"]
+    volumes: ["./rasa-pro:/app/working-data"]
+    environment:
+      CORS_ORIGINS: https://studio.${DOMAIN}
+      RASA_MODEL_SERVER_BASE_URL: http://localhost:8000/modelservice
+      RASA_PRO_LICENSE: ${RASA_PRO_LICENSE}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      KAFKA_BROKER_ADDRESS: kafka:9092
+      KAFKA_TOPIC: rasa-events
+      KAFKA_SECURITY_PROTOCOL: PLAINTEXT
+      KAFKA_SASL_MECHANISM: ""
+      KAFKA_SASL_USERNAME: ""
+      KAFKA_SASL_PASSWORD: ""
+      STUDIO_AUTH_URL: http://studio:4000
+
+volumes:
+  kafka-data:
+  studio-db-data:

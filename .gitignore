@@ -9,3 +9,7 @@ models/
 .pytest_cache/
 .rasa/
 *.db
+foreman/integrations.yml
+infra/studio/.env
+infra/studio/rasa-pro/
+infra/studio/config.js

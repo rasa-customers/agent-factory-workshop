@@ -121,6 +121,16 @@ def test_config_includes_license_after_paste(cloud_client, db):
     assert cfg["assigned"] and cfg["env"]["RASA_LICENSE"] == "LIC-9" and cfg["env"]["OPENAI_API_KEY"].startswith("sk-fake")
 
 
+def test_config_sends_the_studio_address_when_studio_is_set_up(cloud_client, db, monkeypatch):
+    monkeypatch.setenv("STUDIO_KAFKA_URL", "10.77.1.9:29092")
+    client, _ = cloud_client
+    client.post("/signup", data={"email": "studio@x.io"})
+    client.post("/choose", data={"choice": "cloud"})
+    vm = db.vms()[0]
+    cfg = client.get(f"/internal/vm/{vm['id']}/config", headers={"X-Config-Secret": vm["config_secret"]}).json()
+    assert cfg["env"]["STUDIO_KAFKA_URL"] == "10.77.1.9:29092"
+
+
 async def test_ready_machine_records_ip_and_notifies(db, provider):
     seen = []
 

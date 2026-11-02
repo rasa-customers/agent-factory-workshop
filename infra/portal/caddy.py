@@ -16,6 +16,8 @@ def render_caddyfile(vms: list[dict], domain: str) -> str:
         f"http://portal.{domain} {{\n  reverse_proxy portal:8000\n}}",
         f"http://llm.{domain} {{\n  reverse_proxy litellm:4000\n}}",
     ]
+    if os.environ.get("STUDIO_UPSTREAM"):
+        blocks.append(f"http://studio.{domain} {{\n  reverse_proxy {os.environ['STUDIO_UPSTREAM']}\n}}")
     for vm in vms:
         if vm.get("state") != "ready" or not vm.get("ip"):
             continue

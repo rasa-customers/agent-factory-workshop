@@ -129,6 +129,8 @@ def create_app(db: Db, minter: Any, pool: Any | None) -> FastAPI:
                "PUBLIC_HOST": vm["hostname"]}
         if a.get("license"):
             cfg["RASA_LICENSE"] = a["license"]
+        if env("STUDIO_KAFKA_URL"):
+            cfg["STUDIO_KAFKA_URL"] = env("STUDIO_KAFKA_URL")
         return {"assigned": True, "password": vm["password"], "env": cfg}
 
     def admin_only(creds: HTTPBasicCredentials | None = Depends(basic)) -> None:
