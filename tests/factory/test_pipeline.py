@@ -31,7 +31,7 @@ class FakeWorkers:
 
 
 def report(ok, text="panel shows gate"):
-    return CheckReport(passed=ok, items=[CheckItem(expectation=text, passed=ok, evidence="seen" if ok else "missing")])
+    return CheckReport(items=[CheckItem(expectation=text, passed=ok, evidence="seen" if ok else "missing")])
 
 
 def scripted(*reports):

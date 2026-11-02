@@ -16,13 +16,16 @@ set_tracing_disabled(True)  # workshop keys are proxy keys; don't ship traces to
 
 class CheckItem(BaseModel):
     expectation: str
+    evidence: str  # written first, so the verdict follows from what was observed
     passed: bool
-    evidence: str
 
 
 class CheckReport(BaseModel):
-    passed: bool
     items: list[CheckItem]
+
+    @property
+    def passed(self) -> bool:
+        return bool(self.items) and all(i.passed for i in self.items)
 
 
 @lru_cache(maxsize=1)
@@ -59,11 +62,13 @@ person's own brief (and any changes they asked for after seeing an earlier build
 for each thing the brief and each change asks for, alongside the fixed parts. Never read the builder's
 code or files — judge only what a user would observe, using your probe tools.
 {how}
-For every expectation record passed true/false and the evidence you observed. passed overall is true only if
-every expectation passed. Be strict about what the spec asks for and lenient about styling details it doesn't mention.
+For every expectation write the evidence you observed first, then passed true/false so it follows from that
+evidence. The build passes only if every expectation passed. Be strict about what the spec asks for and lenient about styling details it doesn't mention.
 Fail an expectation only for a concrete problem a user would notice, and quote it in the evidence. If what you
 observed meets the expectation, it passes — doubts, hypotheticals, or "could not confirm" are never failures.
-If an expectation only applies in a situation the available data never produces (for example "if there is
+Times in this world are written with the offset the tools return: use them
+exactly as the tools give them, including when you look things up yourself, and never convert them or
+question their offset. If an expectation only applies in a situation the available data never produces (for example "if there is
 more than 30 minutes of slack" when the trip never has that much), it passes with the evidence "not
 reachable with the available data"."""
 
