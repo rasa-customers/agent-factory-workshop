@@ -66,12 +66,16 @@ def explain(e: Exception) -> str:
     return f"The factory hit an error: {msg[:300]}"
 
 
-def builder_input(spec: str, failures: list[str]) -> str:
+def builder_input(spec: str, failures: list[str], change: str | None = None) -> str:
+    text = f"SPEC:\n{spec}"
+    if change:
+        text = (f"This workspace already holds a finished build that passed an earlier version of this spec. "
+                f"The person has seen it and asked for one change:\n\n  {change}\n\n"
+                f"Make that change and keep everything else working as it does now; don't start over.\n\n{text}")
     if not failures:
-        return f"SPEC:\n{spec}"
+        return text
     bullet = "\n".join(f"- {f}" for f in failures)
-    return (f"SPEC:\n{spec}\n\nThe independent checker rejected your last build. Fix these and nothing else:\n"
-            f"{bullet}")
+    return f"{text}\n\nThe independent checker rejected your last build. Fix these and nothing else:\n{bullet}"
 
 
 async def run_job(job: Job, store: JobStore, *, run_agent=Runner.run, host=None, workers=None, seed=None,
@@ -81,13 +85,15 @@ async def run_job(job: Job, store: JobStore, *, run_agent=Runner.run, host=None,
     say = lambda actor, text: store.add_event(job.id, actor, text)  # noqa: E731
     try:
         root = prepare_workspace(job, base=workspace_base)
+        if job.change:
+            say("factory", f"Starting from build {job.based_on} and changing: {job.change}")
         say("factory", f"Workspace ready. Up to {max_rounds} build rounds.")
         async with workers.session(job, root) as crew:
             failures: list[str] = []
             for rnd in range(1, max_rounds + 1):
                 store.update(job.id, state="building" if rnd == 1 else "fixing", round=rnd)
                 say("builder", f"Round {rnd}: building." if rnd == 1 else f"Round {rnd}: fixing {len(failures)} problem(s).")
-                built = await run_agent(crew.builder, builder_input(job.spec, failures),
+                built = await run_agent(crew.builder, builder_input(job.spec, failures, job.change),
                                         hooks=ActivityHooks(store, job.id, "builder"), max_turns=MAX_TURNS)
                 summary = str(built.final_output)
                 say("builder", summary)

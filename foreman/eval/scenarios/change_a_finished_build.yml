@@ -1,0 +1,15 @@
+scenario:
+  name: A change to a finished build goes to revise_build, not a fresh build
+  type: happy_path
+  simulation_context: >
+    You already have a finished dashboard. Say: "I've looked at my dashboard. Can you make the verdict
+    turn red when it's tight or a no?" Then say thanks.
+  goals:
+    criteria:
+      - The agent restates the change in one sentence
+      - The agent shares a link to watch the change being built
+    assertions:
+      - tool_executed:
+          tool_name: revise_build
+          source: mcp
+          mcp_server: factory

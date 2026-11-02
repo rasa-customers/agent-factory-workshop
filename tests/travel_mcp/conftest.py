@@ -16,5 +16,7 @@ async def _call(name, args):
 
 @pytest.fixture
 def call():
+    from travel_mcp import weather
     server.DASHBOARD_HISTORY.clear()
+    weather.FORECASTS.clear()
     return _call

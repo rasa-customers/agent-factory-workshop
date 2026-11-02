@@ -7,7 +7,10 @@ schema:
       description: >
         What the person wants built - dashboard (a web page / UI / display) or mantle_agent (a chatbot,
         assistant, or conversational agent). Set it only once it is clear from what they said.
-    job_id:
-      type: text
+    brief_approved:
+      type: bool
       llm_settable: true
-      description: The job_id returned by start_build for the current build. Record it right after starting a build.
+      description: >
+        Whether the person has approved the brief most recently saved with save_brief. Set false every
+        time you save a brief. Set true only when, after seeing that brief, they say yes, go, or build it
+        (or when they pasted a long brief themselves). Answers to your questions do not set this.

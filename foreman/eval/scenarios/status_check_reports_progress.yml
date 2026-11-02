@@ -3,7 +3,7 @@ scenario:
   type: happy_path
   simulation_context: >
     Paste this brief: "Build a dashboard that shows a single flight's status and gate, updating live."
-    After the agent confirms the build started, ask "how's it going?".
+    When the agent shows the brief, say yes. After the agent confirms the build started, ask "how's it going?".
   goals:
     criteria:
       - The agent does not claim the build is finished unless the factory says so

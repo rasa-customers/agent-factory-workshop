@@ -19,11 +19,9 @@ build somewhat more.
 ## Build something else
 
 The factory builds two kinds of thing: a **dashboard** (a live web page fed by `POST /api/state`) and a
-**Mantle agent** (skills that use MCP tools). To build something new, write a new spec:
-
-1. Copy a prompt from `prompts/` and change what it asks for. Be concrete about what someone would
-   *see* — the checker can only check what it can observe.
-2. Paste it into the foreman.
+**Mantle agent** (skills that use MCP tools). To build something new, describe it to the foreman
+and agree a brief, or write one yourself (start from `prompts/`). Be concrete about what someone would
+*see*: the checker can only check what it can observe.
 
 To go further:
 
@@ -33,6 +31,7 @@ To go further:
 | Change what every build starts from | `templates/dashboard/`, `templates/mantle_agent/` |
 | Change how the builder or checker think | `factory/agents.py` (their instructions) |
 | Change the loop (rounds, what gets fed back) | `factory/pipeline.py` |
+| Change what every brief must include | `factory/contracts/` |
 | Teach the foreman new requests | `foreman/skills/` — then `rasa train` in `foreman/` |
 
 ## Checkpoints

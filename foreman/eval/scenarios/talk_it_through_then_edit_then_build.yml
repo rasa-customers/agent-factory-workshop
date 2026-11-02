@@ -1,0 +1,27 @@
+scenario:
+  name: A short request is talked through, edited, and built only after a yes
+  type: happy_path
+  simulation_context: >
+    You want "a dashboard for my New York trip". Answer questions briefly: it's for your phone in the
+    taxi, light theme, and the will-I-make-it verdict should be the biggest thing. When the agent shows
+    a brief, ask it to also show the meeting address in big type. When it shows the updated brief, say
+    "yes, build it".
+  goals:
+    criteria:
+      - The agent asks no more than three questions before showing a brief
+      - The agent shows the whole updated brief, including the meeting address, before building
+      - Nothing is built until the attendee says yes
+    assertions:
+      - sequencing:
+          - tool_executed:
+              tool_name: save_brief
+              source: mcp
+              mcp_server: factory
+          - tool_executed:
+              tool_name: save_brief
+              source: mcp
+              mcp_server: factory
+          - tool_executed:
+              tool_name: start_build
+              source: mcp
+              mcp_server: factory

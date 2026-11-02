@@ -41,6 +41,13 @@ def dash_ok(tmp_path):
 
 
 @pytest.fixture
+def dash_flash(tmp_path):
+    url, root, server = _serve(tmp_path, "dash_flash")
+    yield url, root
+    server.should_exit = True
+
+
+@pytest.fixture
 def dash_err(tmp_path):
     url, root, server = _serve(tmp_path, "dash_err")
     yield url, root
@@ -53,6 +60,49 @@ async def test_probe_sees_text_change(dash_ok):
     assert "no flight yet" in r["text_before"]
     assert "B22" in r["text_after"]
     assert Path(r["screenshot_path"]).exists()
+
+
+async def test_probe_reports_what_the_page_looks_like(dash_ok):
+    url, root = dash_ok
+    r = await probe(url, [{"panel": "flight", "data": {"gate": "B22"}}], shots_dir=root)
+    look = r["look"]
+    assert look["viewport"] == "tablet 1180x820"
+    assert look["page_background"].startswith("rgb")
+    assert look["largest_text"] and {"text", "font_px", "color"} <= set(look["largest_text"][0])
+    assert look["largest_text"][0]["font_px"] >= look["largest_text"][-1]["font_px"]
+    assert look["horizontal_overflow"] is False
+
+
+async def test_probe_sees_a_background_painted_on_a_wrapper(dash_flash):
+    url, root = dash_flash
+    r = await probe(url, [], shots_dir=root)
+    assert r["look"]["page_background"] == "rgb(10, 10, 20)"
+
+
+async def test_probe_sees_a_brief_highlight_after_an_update(dash_flash):
+    url, root = dash_flash
+    r = await probe(url, [{"panel": "flight", "data": {"gate": "B22"}}], shots_dir=root)
+    assert any("Gate B22" in h["text"] for h in r["look"]["highlighted_briefly"])
+
+
+async def test_probe_reports_no_highlight_when_there_is_none(dash_ok):
+    url, root = dash_ok
+    r = await probe(url, [{"panel": "flight", "data": {"gate": "B22"}}], shots_dir=root)
+    assert r["look"]["highlighted_briefly"] == []
+
+
+async def test_probe_can_look_at_phone_width(dash_ok):
+    url, root = dash_ok
+    r = await probe(url, [], shots_dir=root, viewport="phone")
+    assert r["look"]["viewport"] == "phone 390x844"
+
+
+async def test_probes_at_the_same_time_do_not_mix_up_data(dash_ok):
+    import asyncio
+    url, root = dash_ok
+    a, b = await asyncio.gather(probe(url, [{"panel": "flight", "data": {"gate": "A1"}}], shots_dir=root),
+                                probe(url, [{"panel": "flight", "data": {"gate": "Z9"}}], shots_dir=root))
+    assert "A1" in a["text_after"] and "Z9" in b["text_after"]
 
 
 async def test_probe_captures_console_errors(dash_err):

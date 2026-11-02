@@ -15,6 +15,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 from factory.jobs import KINDS, Job, JobStore
+from factory.specs import full_spec, revised_brief
 from workshop.env import export_settings
 
 Runner = Callable[[Job], Awaitable[None]]
@@ -39,37 +40,78 @@ def build_server(store: JobStore, runner: Runner, *, port: int = 8800) -> FastMC
     def activity_url(job_id: str) -> str:
         return f"{public_url()}/jobs/{job_id}"
 
-    @mcp.tool()
-    async def start_build(kind: str, spec: str) -> dict:
-        """Start building something. kind is "dashboard" or "mantle_agent"; spec is the full description.
-        Returns immediately with a job_id and a link where the build can be watched live."""
-        if kind not in KINDS:
-            return {"error": f"Unknown kind {kind!r}. Use one of: {', '.join(KINDS)}."}
-        job = store.create(kind, spec)  # type: ignore[arg-type]
-        store.add_event(job.id, "factory", f"Job received: build a {kind.replace('_', ' ')}.")
+    def launch(job: Job) -> dict:
         t = asyncio.create_task(_run(job))
         tasks.add(t)
         t.add_done_callback(tasks.discard)
         return {"job_id": job.id, "activity_url": activity_url(job.id)}
 
-    @mcp.tool()
-    async def build_status(job_id: str) -> dict:
-        """How a build is going: state (queued, building, checking, fixing, passed, failed), round, recent activity."""
-        job = store.get(job_id)
-        if job is None:
-            return {"state": "unknown",
-                    "hint": "The factory doesn't know that job — it may have restarted. Start a new build."}
-        recent = [f"{e.actor}: {e.text}" for e in job.events if not e.text.startswith("__")][-5:]
-        return {"state": job.state, "round": job.round, "recent": recent, "activity_url": activity_url(job_id)}
+    def find(job_id: str) -> Job | None:
+        return store.get(job_id) if job_id else store.latest()
+
+    unknown = {"state": "unknown",
+               "hint": "The factory doesn't know that build - it may have restarted. Start a new build."}
+
+    saved: dict[str, str] = {}  # the brief agreed with the person, waiting for their yes
 
     @mcp.tool()
-    async def build_result(job_id: str) -> dict:
-        """The outcome of a finished build: where to open it, a short summary, the checker's report, or the error."""
-        job = store.get(job_id)
+    async def save_brief(kind: str, brief: str) -> dict:
+        """Save the brief agreed with the person, replacing any earlier version. kind is "dashboard" or
+        "mantle_agent". Nothing is built until start_build. Returns the saved brief so you can show it."""
+        if kind not in KINDS:
+            return {"error": f"Unknown kind {kind!r}. Use one of: {', '.join(KINDS)}."}
+        saved.clear()
+        saved[kind] = brief.strip()
+        return {"kind": kind, "brief": saved[kind]}
+
+    @mcp.tool()
+    async def start_build() -> dict:
+        """Build the brief most recently saved with save_brief (the factory adds its own fixed contract).
+        Returns immediately with a job_id and a link where the build can be watched live."""
+        if not saved:
+            return {"error": "No brief is saved. Agree a brief with the person and call save_brief first."}
+        kind, brief = saved.popitem()
+        job = store.create(kind, full_spec(kind, brief), brief=brief)  # type: ignore[arg-type]
+        store.add_event(job.id, "factory", f"Job received: build a {kind.replace('_', ' ')}.")
+        return launch(job)
+
+    @mcp.tool()
+    async def revise_build(change: str, job_id: str = "") -> dict:
+        """Change a finished build instead of starting over: the builder starts from what was built and the
+        checker re-checks everything, including the change. change is one plain sentence describing what
+        the person wants different. job_id defaults to the most recent build."""
+        latest = store.latest()
+        if not job_id and latest is not None and latest.state not in ("passed", "failed"):
+            return {"error": "A build is still running. Wait for it to finish, then ask for the change."}
+        base = store.get(job_id) if job_id else store.latest(state="passed")
+        if base is None or base.state != "passed":
+            return {"error": "There is nothing finished to change yet. Start a build first, or wait for one "
+                             "to pass."}
+        brief = revised_brief(base.brief, change)
+        job = store.create(base.kind, full_spec(base.kind, brief), brief=brief, based_on=base.id,
+                           change=change.strip())
+        store.add_event(job.id, "factory", f"Job received: change the {base.kind.replace('_', ' ')}.")
+        return launch(job)
+
+    @mcp.tool()
+    async def build_status(job_id: str = "") -> dict:
+        """How a build is going: state (queued, building, checking, fixing, passed, failed), round, recent
+        activity. job_id defaults to the most recent build."""
+        job = find(job_id)
         if job is None:
-            return {"state": "unknown",
-                    "hint": "The factory doesn't know that job — it may have restarted. Start a new build."}
-        return {"state": job.state, "result_url": job.result_url, "summary": job.summary,
+            return unknown
+        recent = [f"{e.actor}: {e.text}" for e in job.events if not e.text.startswith("__")][-5:]
+        return {"job_id": job.id, "state": job.state, "round": job.round, "recent": recent,
+                "activity_url": activity_url(job.id)}
+
+    @mcp.tool()
+    async def build_result(job_id: str = "") -> dict:
+        """The outcome of a finished build: where to open it, a short summary, the checker's report, or the
+        error. job_id defaults to the most recent build."""
+        job = find(job_id)
+        if job is None:
+            return unknown
+        return {"job_id": job.id, "state": job.state, "result_url": job.result_url, "summary": job.summary,
                 "check_report": job.check_report, "error": job.error}
 
     @mcp.custom_route("/jobs/{job_id}", methods=["GET"])

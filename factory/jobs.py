@@ -33,6 +33,10 @@ class Job:
     summary: str | None = None
     check_report: list[dict] = field(default_factory=list)
     error: str | None = None
+    brief: str = ""                # what the person asked for, without the factory's fixed contract
+    based_on: str | None = None    # a revision starts from this earlier job's finished build
+    change: str | None = None      # what the revision changes
+    created: float = 0.0
 
 
 class JobStore:
@@ -55,14 +59,21 @@ class JobStore:
     def _save(self, job: Job) -> None:
         (self.root / f"{job.id}.json").write_text(json.dumps(asdict(job), indent=1))
 
-    def create(self, kind: Kind, spec: str) -> Job:
-        job = Job(id=uuid.uuid4().hex[:8], kind=kind, spec=spec)
+    def create(self, kind: Kind, spec: str, *, brief: str = "", based_on: str | None = None,
+               change: str | None = None) -> Job:
+        job = Job(id=uuid.uuid4().hex[:8], kind=kind, spec=spec, brief=brief or spec, based_on=based_on,
+                  change=change, created=time.time())
         self._jobs[job.id] = job
         self._save(job)
         return job
 
     def get(self, job_id: str) -> Job | None:
         return self._jobs.get(job_id)
+
+    def latest(self, state: str | None = None) -> Job | None:
+        """The most recently created job, optionally only among jobs in one state."""
+        jobs = [j for j in self._jobs.values() if state is None or j.state == state]
+        return max(jobs, key=lambda j: j.created, default=None)
 
     def add_event(self, job_id: str, actor: str, text: str) -> None:
         job = self._jobs[job_id]

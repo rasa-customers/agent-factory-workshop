@@ -1,0 +1,10 @@
+<!doctype html><html><head><style>
+#wrap{background:rgb(10,10,20);min-height:100vh;color:#fff} .panel{padding:8px} .flash{background:rgb(255,200,0)}
+</style></head><body><div id="wrap"><div class="panel" id="gate">no flight yet</div></div>
+<script>
+const el=document.getElementById('gate');
+function render(s){el.textContent = s.flight && s.flight.gate ? 'Gate ' + s.flight.gate : 'no flight yet';
+  el.classList.add('flash'); clearTimeout(window.t); window.t=setTimeout(()=>el.classList.remove('flash'), 1200);}
+fetch('api/state').then(r=>r.json()).then(s=>{el.textContent='no flight yet'});
+new EventSource('api/events').addEventListener('state', e => render(JSON.parse(e.data)));
+</script></body></html>

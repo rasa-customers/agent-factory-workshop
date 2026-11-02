@@ -138,3 +138,17 @@ async def test_a_passed_dashboard_gets_the_example_trip(job, store, tmp_path):
                   workspace_base=tmp_path / "ws", seed=seed)
     assert seeded == ["http://localhost:8600"]
     assert any("example" in e.text.lower() for e in store.get(job.id).events)
+
+
+async def test_a_revision_builds_on_the_previous_workspace(store, tmp_path):
+    base = store.create("dashboard", "A dashboard.")
+    run_agent, _ = scripted(report(True))
+    await go(base, store, run_agent, tmp_path)
+    (tmp_path / "ws" / base.id / "static" / "index.html").write_text("<h1>first build</h1>")
+    rev = store.create("dashboard", "A dashboard. Bigger verdict.", based_on=base.id, change="Bigger verdict.")
+    run_agent, calls = scripted(report(True))
+    j, _ = await go(rev, store, run_agent, tmp_path)
+    assert j.state == "passed"
+    assert "Bigger verdict." in calls["builder_inputs"][0] and "already" in calls["builder_inputs"][0]
+    assert (tmp_path / "ws" / rev.id / "static" / "index.html").read_text() == "<h1>first build</h1>"
+    assert any("changing: Bigger verdict." in e.text for e in j.events)

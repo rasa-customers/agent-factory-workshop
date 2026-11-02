@@ -1,20 +1,28 @@
 # 2. Breakout 1 — build the dashboard
 
-You'll ask the factory for a live flight dashboard, watch it build and check its own work, then play with
-the result.
+You'll tell the foreman what you want, agree a short brief with it, watch the factory build and check
+it, then ask for changes until you like it.
 
-## Start the build
+## Agree the brief
 
-1. Open [`prompts/01-dashboard.md`](../prompts/01-dashboard.md) (in the cloud, open it in the code editor)
-   and copy all of it.
-2. Paste it into the foreman and send it.
+Tell the foreman about your trip and what you want, in your own words. For example:
 
-The foreman starts the build straight away and replies with a link to the build's **activity page** — click
-the link button under its message.
+> I'm flying to New York for a meeting and want a dashboard I can glance at on my phone in the taxi.
 
-> **Why it works — the spec.** The prompt is a spec: what's on each panel, what "empty" looks like, how
-> data arrives, what it should look like on a projector. The clearer the spec, the less the factory has
-> to guess, and the more the checker can actually check.
+It asks a couple of questions (where you'll look at it, what should stand out, the look and feel), then
+shows you the brief it will send: a title and a few bullets. Change anything you like ("light theme",
+"make the address huge", "drop the airline name"); it shows the new version each time. When it looks
+right, say **yes**. Nothing is built until you do.
+
+Short on time? Paste [`prompts/01-dashboard.md`](../prompts/01-dashboard.md) instead and say yes.
+
+The foreman replies with a link to the build's **activity page**. Click the button under its message.
+
+> **Why it works — the spec.** You only describe what's yours to decide. The factory adds a fixed
+> contract to every dashboard brief ([`factory/contracts/dashboard.md`](../factory/contracts/dashboard.md)):
+> the four panels and the live data feed the travel agent needs in Breakout 2. Your brief plus that
+> contract is the spec, and the checker tests both. The clearer the spec, the less the factory guesses and
+> the more the checker can actually check.
 
 ## Watch it work
 
@@ -22,9 +30,10 @@ Open the activity page. It updates live, in three columns:
 
 - **Builder** — an OpenAI Agents SDK agent reading the template, writing `static/index.html`, and
   sanity-checking its own files.
-- **Checker** — a *different* agent. It never sees the code. It opens the dashboard in a headless
-  browser, sends it realistic updates for every panel, and reports pass or fail per expectation, with
-  what it actually saw.
+- **Checker** — a *different* agent. It never sees the code. It turns your brief and the contract into a
+  list of expectations, opens the dashboard in a headless browser (at phone, tablet or projector width),
+  sends it realistic updates for every panel, and reports pass or fail per expectation, with what it
+  actually saw: the text, the colours, what's biggest, whether anything highlights when it changes.
 - **Factory** — the line itself: rounds, starting the build, the final verdict.
 
 > **Why it works — the builder.** The builder works in a small, pre-shaped workspace
@@ -46,15 +55,34 @@ It usually takes 1–3 minutes. You can also ask the foreman "how's it going?".
 
 When it passes, the activity page and the foreman give you the dashboard link (`localhost:8600` on a
 laptop). The factory fills it with the workshop's example trip (the flight, live New York weather when
-you land, the meeting, and a verdict), so it's alive straight away. Press **Clear** to empty it, then send
-it data yourself from a terminal:
+you land, the meeting, and a verdict), so it's alive straight away.
+
+## Change it
+
+Look at it the way you'd look at anything someone built for you, and tell the foreman what to change:
+
+> Make the verdict turn red when it's tight or a no.
+
+> The reason is repeated three times. Show it once.
+
+> I can't read the gate from across the room. Make it twice as big.
+
+The factory doesn't start over. The builder starts from the dashboard you're looking at and makes that
+change, and the checker re-checks everything, your change included. Each change is its own build with
+its own activity page, usually a minute or two. Keep going until you like it.
+
+> **Why it works — the human's job.** In a dark factory nobody watches the line. Your work moves to the
+> two ends: saying what you want, and judging what you got. Every change you ask for is one more line in
+> the spec, so the checker holds the factory to it from then on.
+
+### Send it data yourself
+
+Press **Clear** to empty it, then send it data from a terminal:
 
 ```bash
 curl -s localhost:8600/api/state -H 'content-type: application/json' \
   -d '{"panel":"flight","data":{"flight_number":"RA 2026","status":"Delayed","delay_minutes":40,"gate":"B22","previous_gate":"B14"}}'
 ```
-
-Things to try:
 
 - Send the `weather`, `meeting` and `verdict` panels too (`{"status":"tight","slack_minutes":5,"reason":"..."}`).
 - Add a field nobody asked for — it should still show up.

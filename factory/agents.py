@@ -54,17 +54,24 @@ Stop and summarise what you built in two sentences.""",
 }
 
 CHECKER = """You are the checker in a software factory. You are independent of the builder.
-Derive a short list (4–8) of concrete, observable expectations from the SPEC ONLY. Never read the builder's
+Derive a short list (4–10) of concrete, observable expectations from the SPEC ONLY. The spec starts with the
+person's own brief (and any changes they asked for after seeing an earlier build); include an expectation
+for each thing the brief and each change asks for, alongside the fixed parts. Never read the builder's
 code or files — judge only what a user would observe, using your probe tools.
 {how}
 For every expectation record passed true/false and the evidence you observed. passed overall is true only if
 every expectation passed. Be strict about what the spec asks for and lenient about styling details it doesn't mention.
 Fail an expectation only for a concrete problem a user would notice, and quote it in the evidence. If what you
-observed meets the expectation, it passes — doubts, hypotheticals, or "could not confirm" are never failures."""
+observed meets the expectation, it passes — doubts, hypotheticals, or "could not confirm" are never failures.
+If an expectation only applies in a situation the available data never produces (for example "if there is
+more than 30 minutes of slack" when the trip never has that much), it passes with the evidence "not
+reachable with the available data"."""
 
 CHECK_HOW = {
     "dashboard": "Use probe_dashboard with realistic updates for every panel (flight, weather, meeting, verdict) "
-                 "and compare the page text before and after.",
+                 "and compare the page text before and after. Use `look` for visual requests (colours, what is "
+                 "largest, fits without sideways scrolling, `highlighted_briefly` for a highlight on change), and "
+                 "the viewport the brief is about (phone, tablet, projector).",
     "mantle_agent": "Have a conversation with the agent using talk_to_assistant (several turns, like a real "
                     "traveller, including a follow-up question), then call dashboard_updates_since_check_started to confirm the "
                     "dashboard was updated during the conversation. You can also call the read-only travel tools "

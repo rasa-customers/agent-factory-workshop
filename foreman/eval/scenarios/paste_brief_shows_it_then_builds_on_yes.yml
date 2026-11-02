@@ -1,0 +1,24 @@
+scenario:
+  name: A pasted brief is shown back and built on yes
+  type: happy_path
+  simulation_context: >
+    You are a workshop attendee in a hurry. Your first message is exactly this brief: "Build a flight
+    dashboard for a traveller who is flying to New York for a meeting. All four panels fit on one screen
+    and are readable on an iPad. Make it look good on a projector: dark background, large type, high
+    contrast, and a highlight when a panel changes." When the agent shows you the brief and asks, say yes.
+  goals:
+    criteria:
+      - The agent shows the brief before anything is built
+      - The agent shares a link to watch the build after the attendee says yes
+    assertions:
+      - sequencing:
+          - tool_executed:
+              tool_name: save_brief
+              source: mcp
+              mcp_server: factory
+              arguments:
+                kind: dashboard
+          - tool_executed:
+              tool_name: start_build
+              source: mcp
+              mcp_server: factory

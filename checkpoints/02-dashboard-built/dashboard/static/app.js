@@ -46,10 +46,12 @@
   }
 
   function formatTime(v){
+    // The clock time as written (local time where it happens), never converted to the viewer's zone.
     if (!isIsoDateLike(v)) return null;
-    const d = new Date(v);
-    if (isNaN(d.getTime())) return null;
-    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const m = /T(\d{2}):(\d{2})/.exec(v);
+    if (!m) return null;
+    const h = Number(m[1]);
+    return `${h % 12 || 12}:${m[2]} ${h >= 12 ? 'PM' : 'AM'}`;
   }
 
   function titleCaseKey(k){

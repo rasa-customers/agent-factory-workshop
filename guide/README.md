@@ -22,11 +22,15 @@ write what you want and judge what comes out.
 
 It needs four things to earn that:
 
-1. **A spec** — a clear description of what "done" looks like (`prompts/`).
+1. **A spec** — a clear description of what "done" looks like: the brief you agree with the foreman, plus a fixed contract (`factory/contracts/`).
 2. **A builder** — an agent that writes the thing (OpenAI Agents SDK, `factory/agents.py`).
 3. **An independent check** — a second agent that never reads the code, only uses the result the way
    you would, and says pass or fail with evidence.
 4. **A feedback loop** — failures go back to the builder until the check passes (up to 3 rounds).
+
+Around that loop sits a second, slower one, and it's yours: you look at what came back and tell the
+foreman what to change. The factory builds on what it made, and the checker holds it to every change
+from then on.
 
 And an agent is just software — so the same factory can build agents.
 

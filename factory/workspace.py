@@ -19,10 +19,12 @@ TEMPLATE_FOR = {"dashboard": "dashboard", "mantle_agent": "mantle_agent"}
 
 
 def prepare_workspace(job: Job, base: Path = WORKSPACE) -> Path:
-    """Copy the job's template into a fresh workspace folder and return it."""
+    """Copy the job's template (or, for a revision, the earlier build) into a fresh workspace folder."""
     root = Path(base) / job.id
-    shutil.copytree(TEMPLATES / TEMPLATE_FOR[job.kind], root,
-                    ignore=shutil.ignore_patterns("__pycache__", "models", "cache", ".env"))
+    source = TEMPLATES / TEMPLATE_FOR[job.kind]
+    if job.based_on and (Path(base) / job.based_on).is_dir():
+        source = Path(base) / job.based_on
+    shutil.copytree(source, root, ignore=shutil.ignore_patterns("__pycache__", "models", "cache", ".env"))
     return root
 
 
