@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import sys
 
-import httpx
+from infra.portal.keys import revoke_all_keys
 
 from infra.aws.common import DOMAIN, assert_safe_record, in_domain, parent_zone_id, session
 
@@ -35,11 +35,8 @@ def revoke_keys() -> None:
     if not master:
         print("LITELLM_MASTER_KEY not set — skipping key revocation (or stop the litellm container).")
         return
-    h = {"Authorization": f"Bearer {master}"}
-    keys = httpx.get(f"{url}/key/list", headers=h, params={"size": 1000}, timeout=30).json().get("keys", [])
-    if keys:
-        httpx.post(f"{url}/key/delete", headers=h, json={"keys": keys}, timeout=60).raise_for_status()
-    print(f"revoked {len(keys)} keys")
+    n = revoke_all_keys(url, master)
+    print(f"revoked {n} keys")
 
 
 def main() -> None:
