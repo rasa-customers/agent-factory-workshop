@@ -42,9 +42,16 @@ OPENAI_BASE_URL={{ env("PROXY_BASE_URL") }}</pre>
       async function poll() {
         const r = await fetch('/me/vm'); const s = await r.json(); const el = document.getElementById('vm');
         if (s.state === 'ready') {
-          el.innerHTML = '<p class="ok">Your machine is ready and everything is already running.</p>' +
-            '<p><a class="button" target="_blank" href="' + s.foreman_url + '">Talk to the foreman →</a></p>' +
-            '<p><a target="_blank" href="' + s.url + '">Open the code editor</a> (password <code>' + s.password + '</code>) to see the files and logs.</p>';
+          const editor = '<p><a target="_blank" href="' + s.url + '">Open the code editor</a> (password <code>' + s.password + '</code>) to see the files, a terminal and the logs.</p>';
+          if (s.foreman_up) {
+            el.innerHTML = '<p class="ok">Your machine is ready and everything is running.</p>' +
+              '<p><a class="button" target="_blank" href="' + s.foreman_url + '">Talk to the foreman →</a></p>' + editor;
+            return;
+          }
+          el.innerHTML = (s.license
+            ? '<p>Your machine is up. Starting the factory and the foreman (about a minute)… this page updates by itself.</p>'
+            : '<p class="warn">Your machine is up. Save your Rasa license above to start the factory.</p>') + editor;
+          setTimeout(poll, 5000);
           return;
         }
         el.innerHTML = s.state === 'full'

@@ -6,6 +6,8 @@ import os
 
 import httpx
 
+STARTING = ("This part of your workshop machine is still starting. It comes up about a minute after your "
+            "license is saved on the portal - refresh in a moment.")
 PORTS = {"": 8080, "-foreman": 5005, "-agent": 5006, "-dashboard": 8600, "-factory": 8800}
 
 
@@ -18,7 +20,8 @@ def render_caddyfile(vms: list[dict], domain: str) -> str:
         if vm.get("state") != "ready" or not vm.get("ip"):
             continue
         for suffix, port in PORTS.items():
-            blocks.append(f"http://{vm['id']}{suffix}.{domain} {{\n  reverse_proxy {vm['ip']}:{port}\n}}")
+            blocks.append(f"http://{vm['id']}{suffix}.{domain} {{\n  reverse_proxy {vm['ip']}:{port}\n"
+                          f"  handle_errors {{\n    respond \"{STARTING}\" 503\n  }}\n}}")
     health = ":80 {\n  respond /healthz \"ok\" 200\n  respond \"Unknown host\" 404\n}"
     return "{\n  admin 0.0.0.0:2019\n  auto_https off\n}\n\n" + "\n\n".join(blocks + [health]) + "\n"
 

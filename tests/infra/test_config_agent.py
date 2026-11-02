@@ -55,3 +55,9 @@ def test_apply_resets_failed_service_and_keeps_editor_when_password_unchanged(tm
     ca.apply({**cfg, "env": {**cfg["env"], "RASA_LICENSE": "LIC"}}, "vm-03", DOMAIN)
     assert ["systemctl", "restart", "code-server@workshop"] not in calls
     assert calls.index(["systemctl", "reset-failed", "workshop-up"]) < calls.index(["systemctl", "restart", "workshop-up"])
+
+
+def test_vm_routes_explain_instead_of_a_blank_page_while_starting():
+    text = render_caddyfile([{"id": "vm-01", "ip": "10.0.0.5", "state": "ready"}], DOMAIN)
+    block = text[text.index("http://vm-01-foreman.fw.example"):]
+    assert "handle_errors" in block[:400] and "starting" in block[:400]

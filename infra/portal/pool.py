@@ -9,6 +9,7 @@ from infra.portal.db import Db
 from infra.portal.providers import VmProvider
 
 ACTIVE = ("launching", "ready")
+REPO_DIR = "/home/workshop/agent-factory-workshop"
 
 
 class Pool:
@@ -93,7 +94,12 @@ class Pool:
             return {"state": "full"}
         if vm["state"] != "ready":
             return {"state": "starting"}
-        return {"state": "ready", "url": f"https://{vm['hostname']}/", "password": vm["password"],
+        try:
+            foreman_up = bool(await self.provider.services_up(vm))
+        except Exception:  # noqa: BLE001
+            foreman_up = False
+        return {"state": "ready", "url": f"https://{vm['hostname']}/?folder={REPO_DIR}", "password": vm["password"],
+                "license": bool(a and a["license"]), "foreman_up": foreman_up,
                 "foreman_url": f"https://{vm['id']}-foreman.{self.domain}/webhooks/inspector/inspect.html"
                                f"?projectUrl=https%3A%2F%2F{vm['id']}-foreman.{self.domain}&channel=inspector"}
 

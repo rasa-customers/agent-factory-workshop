@@ -157,3 +157,16 @@ async def test_failed_launch_is_marked_failed_and_pool_recovers(db):
     provider.ready_all()
     await pool.tick()
     assert len(db.vms("ready")) == 2
+
+
+async def test_ready_status_opens_repo_and_reports_whether_the_foreman_is_up(db, provider):
+    pool = make_pool(db, provider, warm=1)
+    await pool.tick(); provider.ready_all(); await pool.tick()
+    db.add_attendee("a@x.io", "sk", "t1"); db.set_attendee("a@x.io", choice="cloud")
+    s = await pool.status_for("a@x.io")
+    assert s["state"] == "ready"
+    assert s["url"].endswith("/?folder=/home/workshop/agent-factory-workshop")
+    assert s["license"] is False and s["foreman_up"] is False
+    db.set_attendee("a@x.io", license="LIC"); provider.services_up_all()
+    s = await pool.status_for("a@x.io")
+    assert s["license"] is True and s["foreman_up"] is True

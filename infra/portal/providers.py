@@ -16,6 +16,8 @@ class VmProvider(Protocol):
     async def is_ready(self, vm: dict) -> str | None:
         """The machine's private IP once it is up and serving, else None."""
     async def terminate(self, vm: dict) -> None: ...
+    async def services_up(self, vm: dict) -> bool:
+        """True once the foreman answers (it starts after the attendee's license arrives)."""
 
 
 class FakeProvider:
@@ -38,6 +40,12 @@ class FakeProvider:
 
     async def terminate(self, vm: dict) -> None:
         self._ready.discard(vm["hostname"])
+
+    def services_up_all(self) -> None:
+        self._up = True
+
+    async def services_up(self, vm: dict) -> bool:
+        return getattr(self, "_up", False)
 
 
 USER_DATA = """#!/bin/bash
@@ -92,6 +100,15 @@ class Ec2Provider:
         except httpx.HTTPError:
             ok = False
         return addr if ok else None
+
+    async def services_up(self, vm: dict) -> bool:
+        if not vm.get("ip"):
+            return False
+        try:
+            async with httpx.AsyncClient(timeout=2) as c:
+                return (await c.get(f"http://{vm['ip']}:5005/")).status_code == 200
+        except httpx.HTTPError:
+            return False
 
     async def terminate(self, vm: dict) -> None:
         await asyncio.to_thread(self.ec2.terminate_instances, InstanceIds=[vm["instance_id"]])
