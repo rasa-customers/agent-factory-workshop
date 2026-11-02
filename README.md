@@ -24,7 +24,7 @@ builder and checker).
 |---|---|
 | `foreman/` | The Mantle agent you talk to. Its tools are the factory's. |
 | `factory/` | The factory: builder and checker agents (OpenAI Agents SDK), the build loop, a live activity page. |
-| `prompts/` | Ready-made briefs for the two builds, if you'd rather paste than talk it through. |
+| `prompts/` | Opening lines for the two builds, if you're not sure what to say to the foreman. |
 | `factory/contracts/` | The fixed part of every spec the factory adds to your brief. |
 | `templates/` | What each build starts from. |
 | `travel_mcp/` | The tools the travel agent uses: flight, weather (live, Open-Meteo), meeting, travel time, dashboard. |
@@ -39,5 +39,5 @@ builder and checker).
 uv run workshop up
 ```
 
-Then open the foreman link it prints and tell it what you'd like built (or paste `prompts/01-dashboard.md`). Details are in the
+Then open the foreman link it prints and tell it what you'd like built (or paste the opening line in `prompts/01-dashboard.md`). Details are in the
 [guide](guide/01-get-set-up.md).

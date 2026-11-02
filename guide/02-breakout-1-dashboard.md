@@ -14,7 +14,7 @@ shows you the brief it will send: a title and a few bullets. Change anything you
 "make the address huge", "drop the airline name"); it shows the new version each time. When it looks
 right, say **yes**. Nothing is built until you do.
 
-Short on time? Paste [`prompts/01-dashboard.md`](../prompts/01-dashboard.md) instead and say yes.
+Not sure what to say? Paste the opening line in [`prompts/01-dashboard.md`](../prompts/01-dashboard.md) and answer the foreman's questions. Short on time? Add "just build it".
 
 The foreman replies with a link to the build's **activity page**. Click the button under its message.
 

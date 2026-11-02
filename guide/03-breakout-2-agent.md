@@ -14,8 +14,8 @@ example:
 > it should warn me about anything that could make me late.
 
 It asks about tone, how much the agent says, and what it should point out without being asked, then
-shows the brief. Change it until it's right and say **yes**. Short on time? Paste
-[`prompts/02-travel-agent.md`](../prompts/02-travel-agent.md) and say yes.
+shows the brief. Change it until it's right and say **yes**. Not sure where to start? Paste
+the opening line in [`prompts/02-travel-agent.md`](../prompts/02-travel-agent.md) and answer the foreman's questions.
 
 > **Why it works — the fixed parts.** Your brief is about personality and behaviour. The factory adds the
 > agent contract ([`factory/contracts/mantle_agent.md`](../factory/contracts/mantle_agent.md)): which

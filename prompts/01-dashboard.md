@@ -1,4 +1,2 @@
-Build a flight dashboard for a traveller who is flying to New York for a meeting.
-
-All four panels fit on one screen and are readable on an iPad. Make it look good on a projector: dark
-background, large type, high contrast, and a highlight when a panel changes.
+I'm flying to New York for a meeting. I'd like a dashboard for the trip: my flight (status, delay, gate),
+the weather when I land, my meeting (time and address), and whether I'll make it.

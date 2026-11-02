@@ -1,0 +1,25 @@
+scenario:
+  name: The opening line from prompts/ gets questions, then a brief, then a build on yes
+  type: happy_path
+  simulation_context: >
+    Your first message is exactly: "I'm flying to New York for a meeting. I'd like a dashboard for the
+    trip: my flight (status, delay, gate), the weather when I land, my meeting (time and address), and
+    whether I'll make it." Answer questions briefly: it's for the big screen in your team room and the
+    verdict should dominate. When the agent shows you the brief and asks, say yes.
+  goals:
+    criteria:
+      - The agent asks at least one question before showing a brief
+      - The agent never asks for the flight number, times or the meeting address
+      - The agent shows the brief, with the four fixed panels mentioned, before anything is built
+    assertions:
+      - sequencing:
+          - tool_executed:
+              tool_name: save_brief
+              source: mcp
+              mcp_server: factory
+              arguments:
+                kind: dashboard
+          - tool_executed:
+              tool_name: start_build
+              source: mcp
+              mcp_server: factory

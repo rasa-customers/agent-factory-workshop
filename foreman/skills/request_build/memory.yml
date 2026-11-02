@@ -12,5 +12,5 @@ schema:
       llm_settable: true
       description: >
         Whether the person has approved the brief most recently saved with save_brief. Set false every
-        time you save a brief. Set true only when, after seeing that brief, they say yes, go, or build it
-        (or when they pasted a long brief themselves). Answers to your questions do not set this.
+        time you save a brief. Set true only when, after seeing that brief, they say yes, go, or build it.
+        Answers to your questions do not set this.
