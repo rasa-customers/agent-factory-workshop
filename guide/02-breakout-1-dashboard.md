@@ -9,7 +9,8 @@ the result.
    and copy all of it.
 2. Paste it into the foreman and send it.
 
-The foreman starts the build straight away and replies with a link to the build's **activity page**.
+The foreman starts the build straight away and replies with a link to the build's **activity page** — click
+the link button under its message.
 
 > **Why it works — the spec.** The prompt is a spec: what's on each panel, what "empty" looks like, how
 > data arrives, what it should look like on a projector. The clearer the spec, the less the factory has

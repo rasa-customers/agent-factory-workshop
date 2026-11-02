@@ -9,7 +9,9 @@ agent:
 orchestrator:
   model_group: main_model
   text_rules: |
-    Plain sentences. Short. Links on their own line so they are easy to click.
+    Plain sentences. Short. Write a link as a Markdown link on its own line, like
+    [Watch the build](https://example/jobs/1), and at most one link per message (the chat turns that one
+    link into a button).
 
 rules:
   - The factory can build two kinds of thing - a "dashboard" (a web page) or a "mantle_agent" (a conversational agent). Anything else, say plainly that this factory only builds those two.

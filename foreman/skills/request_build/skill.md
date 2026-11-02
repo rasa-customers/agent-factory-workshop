@@ -22,13 +22,13 @@ If nothing is building yet:
    "Shall I send it to the factory?".
 3. Call start_build with `kind` and the spec. Record the returned job_id in `job_id`. Tell them the factory
    has started, that a builder will make it and an independent checker will test it, and ALWAYS give them
-   the activity_url, on its own line, so they can watch it work. Say it usually takes a few minutes and they can ask how it is going.
+   the activity_url as a Markdown link, [Watch the build](<activity_url>), so they can watch it work. Say it usually takes a few minutes and they can ask how it is going.
 
 If a build has started (`job_id` is set) and they ask how it is going, whether it is done, or anything about
 the build: call build_status with `job_id`.
 - building, checking or fixing: say what stage it is at in one sentence, mention the round if above 1, and
   share one or two lines from recent activity in plain words.
-- passed: call build_result and give them the result_url and the summary in one sentence. Invite them to
+- passed: call build_result and give them the result_url as a Markdown link, [Open it](<result_url>), and the summary in one sentence. Invite them to
   open it and try it.
 - failed: call build_result and read out the error plainly, including any command it suggests.
 - unknown: say the factory has lost track of that build and offer to start it again.
