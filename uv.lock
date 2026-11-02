@@ -52,6 +52,7 @@ dependencies = [
     { name = "openai-agents" },
     { name = "playwright" },
     { name = "pydantic-settings" },
+    { name = "python-dotenv" },
     { name = "rasa-pro" },
     { name = "uvicorn" },
 ]
@@ -75,6 +76,7 @@ requires-dist = [
     { name = "openai-agents", specifier = "==0.20.0" },
     { name = "playwright", specifier = ">=1.48" },
     { name = "pydantic-settings", specifier = ">=2" },
+    { name = "python-dotenv", specifier = ">=1" },
     { name = "rasa-pro", specifier = "==3.22.0.dev2" },
     { name = "uvicorn" },
 ]

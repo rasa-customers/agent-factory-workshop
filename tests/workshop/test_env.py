@@ -40,3 +40,16 @@ def test_factory_main_exports_settings_before_serving(monkeypatch):
     monkeypatch.setattr("uvicorn.run", lambda *a, **k: called.append("served"))
     srv.main()
     assert called == [True, "served"]
+
+
+def test_export_settings_passes_through_extra_env_file_vars(tmp_path, monkeypatch):
+    # cloud machines get their public URLs via .env; every process `workshop up` starts must see them
+    import os
+    from workshop.env import export_settings
+    (tmp_path / ".env").write_text("DASHBOARD_PUBLIC_URL=https://vm-02-dashboard.example\nFOREMAN_PUBLIC_URL=https://f\n")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("DASHBOARD_PUBLIC_URL", raising=False)
+    monkeypatch.setenv("FOREMAN_PUBLIC_URL", "https://already-set")
+    export_settings(make())
+    assert os.environ["DASHBOARD_PUBLIC_URL"] == "https://vm-02-dashboard.example"
+    assert os.environ["FOREMAN_PUBLIC_URL"] == "https://already-set"

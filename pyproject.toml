@@ -12,6 +12,7 @@ dependencies = [
     "httpx",
     "pydantic-settings>=2",
     "playwright>=1.48",
+    "python-dotenv>=1",
 ]
 
 [project.scripts]

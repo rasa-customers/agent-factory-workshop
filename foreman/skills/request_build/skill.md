@@ -21,8 +21,8 @@ If nothing is building yet:
    what it must show or do and who it is for. Then restate the spec in one or two sentences and ask
    "Shall I send it to the factory?".
 3. Call start_build with `kind` and the spec. Record the returned job_id in `job_id`. Tell them the factory
-   has started, that a builder will make it and an independent checker will test it, and give them the
-   activity_url so they can watch. Say it usually takes a few minutes and they can ask how it is going.
+   has started, that a builder will make it and an independent checker will test it, and ALWAYS give them
+   the activity_url, on its own line, so they can watch it work. Say it usually takes a few minutes and they can ask how it is going.
 
 If a build has started (`job_id` is set) and they ask how it is going, whether it is done, or anything about
 the build: call build_status with `job_id`.

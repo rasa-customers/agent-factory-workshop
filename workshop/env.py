@@ -39,3 +39,8 @@ def export_settings(settings: "Settings | None" = None) -> None:
     for k, v in s.model_dump().items():
         if v is not None and k.upper() not in os.environ:
             os.environ[k.upper()] = str(v)
+    from dotenv import dotenv_values  # extra keys (e.g. the *_PUBLIC_URLs a cloud machine gets) pass through too
+    for name in (".env", ".env.local"):
+        for k, v in dotenv_values(name).items():
+            if v is not None and k not in os.environ:
+                os.environ[k] = v
