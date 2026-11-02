@@ -35,6 +35,7 @@ OPENAI_BASE_URL={{ env("PROXY_BASE_URL") }}</pre>
   {% if a.choice == 'local' %}
     <p style="margin-top:16px">Needs macOS, Linux, or Windows with WSL, and Python 3.11–3.13. Paste this into a terminal:</p>
     <pre>{{ command }}</pre>
+    <p><button type="button" class="copy" data-copy="{{ command }}">Copy</button></p>
     <p class="muted">Then run <code>uv run workshop up</code>. The guide in the repo walks you through the rest.</p>
   {% elif a.choice == 'cloud' %}
     <div id="vm" style="margin-top:16px"><p>Getting your machine…</p></div>
@@ -61,13 +62,16 @@ OPENAI_BASE_URL={{ env("PROXY_BASE_URL") }}</pre>
         setTimeout(poll, 5000);
       }
       poll();
-      document.addEventListener('click', async (e) => {  // one handler: the block above is redrawn while it starts
-        const b = e.target.closest('[data-copy]'); if (!b) return;
-        try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; }
-        catch { b.textContent = 'Select and copy it'; }
-        setTimeout(() => { b.textContent = 'Copy'; }, 1500);
-      });
     </script>
   {% endif %}
 </div>
+<script>
+  // Copy buttons (some are drawn later by the machine-status poll, so listen on the whole page)
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-copy]'); if (!b) return;
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; }
+    catch { b.textContent = 'Select and copy it'; }
+    setTimeout(() => { b.textContent = 'Copy'; }, 1500);
+  });
+</script>
 {% endblock %}

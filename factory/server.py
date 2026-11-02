@@ -118,6 +118,17 @@ def build_server(store: JobStore, runner: Runner, *, port: int = 8800) -> FastMC
     async def activity_page(request: Request) -> HTMLResponse:
         return HTMLResponse(ACTIVITY_HTML.read_text() if ACTIVITY_HTML.exists() else "<p>activity</p>")
 
+    @mcp.custom_route("/jobs/latest/links", methods=["GET"])
+    async def latest_links(request: Request) -> JSONResponse:
+        """Labelled links for the latest build; the foreman turns them into buttons."""
+        job = store.latest()
+        links = []
+        if job is not None:
+            if job.state == "passed" and job.result_url:
+                links.append({"title": "Open it", "url": job.result_url})
+            links.append({"title": "Watch the build", "url": activity_url(job.id)})
+        return JSONResponse({"links": links})
+
     @mcp.custom_route("/jobs/{job_id}/state", methods=["GET"])
     async def job_state(request: Request) -> JSONResponse:
         job = store.get(request.path_params["job_id"])

@@ -73,3 +73,18 @@ async def test_runner_crash_marks_job_failed(store):
     r = await build(server, "dashboard", "x")
     await asyncio.sleep(0.05)
     assert store.get(r["job_id"]).state == "failed"
+
+
+def test_latest_links_give_the_activity_page_then_the_result(store):
+    from starlette.testclient import TestClient
+
+    server = build_server(store, lambda job: None)
+    http = TestClient(server.streamable_http_app())
+    assert http.get("/jobs/latest/links").json() == {"links": []}
+    job = store.create("dashboard", "x")
+    links = http.get("/jobs/latest/links").json()["links"]
+    assert links == [{"title": "Watch the build", "url": f"http://localhost:8800/jobs/{job.id}"}]
+    store.update(job.id, state="passed", result_url="http://localhost:8600/")
+    links = http.get("/jobs/latest/links").json()["links"]
+    assert links[0] == {"title": "Open it", "url": "http://localhost:8600/"}
+    assert links[1]["title"] == "Watch the build"

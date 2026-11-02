@@ -46,6 +46,7 @@ def test_apply_resets_failed_service_and_keeps_editor_when_password_unchanged(tm
     calls = []
     monkeypatch.setattr(ca, "REPO", tmp_path)
     monkeypatch.setattr(ca, "CODE_SERVER_CONFIG", tmp_path / "cs" / "config.yaml")
+    monkeypatch.setattr(ca, "EDITOR_SETTINGS", tmp_path / "User" / "settings.json")
     monkeypatch.setattr(ca.subprocess, "run", lambda cmd, **kw: calls.append(cmd))
     cfg = {"password": "pw", "env": {"OPENAI_API_KEY": "sk-1", "OPENAI_BASE_URL": "https://llm/v1"}}
     ca.apply(cfg, "vm-03", DOMAIN)
@@ -61,3 +62,25 @@ def test_vm_routes_explain_instead_of_a_blank_page_while_starting():
     text = render_caddyfile([{"id": "vm-01", "ip": "10.0.0.5", "state": "ready"}], DOMAIN)
     block = text[text.index("http://vm-01-foreman.fw.example"):]
     assert "handle_errors" in block[:400] and "starting" in block[:400]
+
+
+def test_apply_hides_the_editors_ai_chat(tmp_path, monkeypatch):
+    import json
+    import infra.vm.config_agent as ca
+    monkeypatch.setattr(ca, "REPO", tmp_path)
+    monkeypatch.setattr(ca, "CODE_SERVER_CONFIG", tmp_path / "cs" / "config.yaml")
+    monkeypatch.setattr(ca, "EDITOR_SETTINGS", tmp_path / "User" / "settings.json")
+    monkeypatch.setattr(ca.subprocess, "run", lambda cmd, **kw: None)
+    ca.apply({"password": "pw", "env": {"OPENAI_API_KEY": "k", "OPENAI_BASE_URL": "u"}}, "vm-03", DOMAIN)
+    settings = json.loads((tmp_path / "User" / "settings.json").read_text())
+    assert settings["chat.disableAIFeatures"] is True
+    assert settings["workbench.secondarySideBar.defaultVisibility"] == "hidden"
+    assert settings["terminal.integrated.cwd"] == "/home/workshop/agent-factory-workshop"
+
+
+def test_editor_skips_the_virtualenv_and_background_checks():
+    from infra.vm.config_agent import EDITOR
+    assert EDITOR["files.watcherExclude"]["**/.venv/**"] is True
+    assert EDITOR["files.exclude"]["**/.venv"] is True
+    assert EDITOR["extensions.autoCheckUpdates"] is False and EDITOR["git.enabled"] is False
+    assert EDITOR["workbench.startupEditor"] == "none"

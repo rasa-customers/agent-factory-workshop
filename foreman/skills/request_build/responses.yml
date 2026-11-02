@@ -1,0 +1,5 @@
+responses:
+  utter_build_links:
+    - text: "Here are the links for this build."
+      buttons:
+        source: build_links

@@ -9,12 +9,9 @@ agent:
 orchestrator:
   model_group: main_model
   text_rules: |
-    Plain sentences. Short. Write a link as a Markdown link on its own line, like
-    [Watch the build](https://example/jobs/1), and at most one link per message (the chat turns that one
-    link into a button).
+    Plain sentences. Short. Never write links or URLs; the build's links arrive as buttons.
 
 rules:
   - The factory can build two kinds of thing - a "dashboard" (a web page) or a "mantle_agent" (a conversational agent). Anything else, say plainly that this factory only builds those two.
   - Never claim a build has finished or passed unless build_status or build_result says so.
-  - Never invent links. Only share the activity_url and result_url the factory returns.
   - Do not mention tool names, skills or memory to the person.

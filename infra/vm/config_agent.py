@@ -14,11 +14,19 @@ from pathlib import Path
 REPO = Path("/home/workshop/agent-factory-workshop")
 CODE_SERVER_CONFIG = Path("/home/workshop/.config/code-server/config.yaml")
 EDITOR_SETTINGS = Path("/home/workshop/.local/share/code-server/User/settings.json")
-# The workshop's AI lives in the foreman; the editor's own chat panel would only confuse people.
-EDITOR = {"workbench.startupEditor": "readme", "security.workspace.trust.enabled": False,
+# The workshop's AI lives in the foreman, so the editor's own chat is hidden. The rest keeps the editor quick:
+# .venv alone is ~35,000 files, and the marketplace, update and git checks only slow the first load.
+EDITOR = {"workbench.startupEditor": "none", "security.workspace.trust.enabled": False,
           "terminal.integrated.cwd": "/home/workshop/agent-factory-workshop",
           "chat.disableAIFeatures": True, "chat.commandCenter.enabled": False,
-          "workbench.secondarySideBar.defaultVisibility": "hidden"}
+          "workbench.secondarySideBar.defaultVisibility": "hidden",
+          "files.watcherExclude": {"**/.venv/**": True, "**/.git/objects/**": True, "**/__pycache__/**": True,
+                                   "**/workspace/**": True},
+          "files.exclude": {"**/.venv": True, "**/__pycache__": True, "**/.pytest_cache": True},
+          "search.exclude": {"**/.venv": True, "**/workspace/**/models": True},
+          "extensions.autoCheckUpdates": False, "extensions.autoUpdate": False,
+          "extensions.ignoreRecommendations": True, "update.mode": "none", "telemetry.telemetryLevel": "off",
+          "workbench.enableExperiments": False, "git.enabled": False}
 SERVICES = {"code": None, "foreman": 5005, "agent": 5006, "dashboard": 8600, "factory": 8800}
 
 
