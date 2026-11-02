@@ -44,6 +44,7 @@ ExecStartPre=-/usr/bin/git pull --ff-only
 ExecStartPre=-/home/workshop/.local/bin/uv sync
 ExecStart=/home/workshop/.local/bin/uv run workshop up
 Restart=on-failure
+RestartSec=15
 [Install]
 WantedBy=multi-user.target
 EOT
@@ -58,6 +59,7 @@ ConditionPathExists=/etc/factory-workshop.env
 WorkingDirectory=/home/workshop/agent-factory-workshop
 ExecStart=/usr/bin/python3 -m infra.vm.config_agent
 Restart=always
+RestartSec=15
 [Install]
 WantedBy=multi-user.target
 EOT

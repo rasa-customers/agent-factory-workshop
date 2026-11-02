@@ -25,7 +25,7 @@ class Pool:
         return [v for v in self._active() if not v["attendee_email"]]
 
     async def _launch(self) -> dict | None:
-        if len(self._active()) >= self.ceiling:
+        if len(self._active()) >= self.ceiling or time.time() < getattr(self, "_retry_after", 0):
             return None
         n = len(self.db.vms()) + 1
         vm_id = f"vm-{n:02d}"
@@ -33,7 +33,13 @@ class Pool:
         secret = secrets.token_urlsafe(24)
         self.db.add_vm(id=vm_id, hostname=hostname, state="launching", config_secret=secret,
                        password=secrets.token_urlsafe(9), created_at=time.time())
-        instance_id = await self.provider.launch(vm_id, hostname, secret)
+        try:
+            instance_id = await self.provider.launch(vm_id, hostname, secret)
+        except Exception as e:  # noqa: BLE001 — a failed launch must not poison the pool
+            print(f"launch of {vm_id} failed: {e}", flush=True)
+            self.db.set_vm(vm_id, state="failed")
+            self._retry_after = time.time() + 60  # don't hammer EC2 (or fill the table) while something is wrong
+            return None
         self.db.set_vm(vm_id, instance_id=instance_id)
         return self.db.vm(vm_id)
 
@@ -41,7 +47,13 @@ class Pool:
         async with self.lock:
             changed = False
             for vm in self.db.vms("launching"):
-                ip = await self.provider.is_ready(vm)
+                if not vm["instance_id"]:
+                    continue
+                try:
+                    ip = await self.provider.is_ready(vm)
+                except Exception as e:  # noqa: BLE001
+                    print(f"readiness check for {vm['id']} failed: {e}", flush=True)
+                    continue
                 if ip:
                     self.db.set_vm(vm["id"], state="ready", ip=ip, ready_at=time.time())
                     changed = True

@@ -39,3 +39,19 @@ def test_render_caddyfile_routes():
     # TLS ends at the load balancer (ACM wildcard); Caddy serves plain HTTP and routes by Host
     assert "http://portal.fw.example" in text and "http://vm-01-foreman.fw.example" in text
     assert "tls " not in text
+
+
+def test_apply_resets_failed_service_and_keeps_editor_when_password_unchanged(tmp_path, monkeypatch):
+    import infra.vm.config_agent as ca
+    calls = []
+    monkeypatch.setattr(ca, "REPO", tmp_path)
+    monkeypatch.setattr(ca, "CODE_SERVER_CONFIG", tmp_path / "cs" / "config.yaml")
+    monkeypatch.setattr(ca.subprocess, "run", lambda cmd, **kw: calls.append(cmd))
+    cfg = {"password": "pw", "env": {"OPENAI_API_KEY": "sk-1", "OPENAI_BASE_URL": "https://llm/v1"}}
+    ca.apply(cfg, "vm-03", DOMAIN)
+    assert ["systemctl", "restart", "code-server@workshop"] in calls
+    # a license pasted later: workshop-up may have hit its start limit, so reset it; the editor stays up
+    calls.clear()
+    ca.apply({**cfg, "env": {**cfg["env"], "RASA_LICENSE": "LIC"}}, "vm-03", DOMAIN)
+    assert ["systemctl", "restart", "code-server@workshop"] not in calls
+    assert calls.index(["systemctl", "reset-failed", "workshop-up"]) < calls.index(["systemctl", "restart", "workshop-up"])

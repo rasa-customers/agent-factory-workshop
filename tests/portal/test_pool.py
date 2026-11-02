@@ -129,3 +129,31 @@ async def test_ready_machine_records_ip_and_notifies(db, provider):
     pool = Pool(db, provider, warm=1, ceiling=2, domain="fw.example", on_change=on_change)
     await pool.tick(); provider.ready_all(); await pool.tick()
     assert db.vms("ready")[0]["ip"] == "10.0.0.10" and seen == [["10.0.0.10"]]
+
+
+class FlakyProvider(FakeProvider):
+    """Fails its first launch (e.g. the launch template doesn't exist yet)."""
+
+    def __init__(self):
+        super().__init__()
+        self.fail_next = True
+
+    async def launch(self, vm_id, hostname, config_secret):
+        if self.fail_next:
+            self.fail_next = False
+            raise RuntimeError("InvalidLaunchTemplateName.NotFound")
+        return await super().launch(vm_id, hostname, config_secret)
+
+
+async def test_failed_launch_is_marked_failed_and_pool_recovers(db):
+    provider = FlakyProvider()
+    pool = make_pool(db, provider, warm=2)
+    await pool.tick()          # first launch fails: no crash, nothing half-made counted as active
+    assert [v["state"] for v in db.vms("failed")] == ["failed"]
+    await pool.tick()          # backs off for a minute: no new failed rows
+    assert len(db.vms()) == 1
+    pool._retry_after = 0
+    await pool.tick()          # later ticks keep working and fill the pool
+    provider.ready_all()
+    await pool.tick()
+    assert len(db.vms("ready")) == 2

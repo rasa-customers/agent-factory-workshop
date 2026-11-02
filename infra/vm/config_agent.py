@@ -12,6 +12,7 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path("/home/workshop/agent-factory-workshop")
+CODE_SERVER_CONFIG = Path("/home/workshop/.config/code-server/config.yaml")
 SERVICES = {"code": None, "foreman": 5005, "agent": 5006, "dashboard": 8600, "factory": 8800}
 
 
@@ -48,13 +49,16 @@ def apply(cfg: dict, vm_id: str, domain: str) -> None:
     env_file.write_text(render_env(cfg["env"], vm_id, domain))
     os.chmod(env_file, 0o600)
     subprocess.run(["chown", "workshop:workshop", str(env_file)])
-    cs = Path("/home/workshop/.config/code-server/config.yaml")
-    cs.parent.mkdir(parents=True, exist_ok=True)
-    cs.write_text(f"bind-addr: 0.0.0.0:8080\nauth: password\npassword: {cfg['password']}\ncert: false\n")
-    subprocess.run(["chown", "-R", "workshop:workshop", str(cs.parent)])
-    subprocess.run(["systemctl", "restart", "code-server@workshop"])
+    cs = CODE_SERVER_CONFIG
+    text = f"bind-addr: 0.0.0.0:8080\nauth: password\npassword: {cfg['password']}\ncert: false\n"
+    if not cs.exists() or cs.read_text() != text:  # only bounce the editor when its password changes
+        cs.parent.mkdir(parents=True, exist_ok=True)
+        cs.write_text(text)
+        subprocess.run(["chown", "-R", "workshop:workshop", str(cs.parent)])
+        subprocess.run(["systemctl", "restart", "code-server@workshop"])
+    # workshop-up may have hit systemd's start limit while the license was missing
+    subprocess.run(["systemctl", "reset-failed", "workshop-up"])
     subprocess.run(["systemctl", "restart", "workshop-up"])
-
 
 def main() -> None:
     conf = _read_env(Path("/etc/factory-workshop.env"))
