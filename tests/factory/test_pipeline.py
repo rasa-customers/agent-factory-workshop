@@ -75,7 +75,7 @@ async def test_pipeline_feeds_failures_back(job, store, tmp_path):
 async def test_pipeline_fails_after_max_rounds(job, store, tmp_path):
     run_agent, _ = scripted(report(False), report(False), report(False))
     j, _ = await go(job, store, run_agent, tmp_path)
-    assert j.state == "failed" and "workshop checkpoint 02-dashboard-built" in j.error
+    assert j.state == "failed" and "uv run workshop checkpoint 02-dashboard-built" in j.error
 
 
 async def test_pipeline_marks_failed_on_llm_error(job, store, tmp_path):
@@ -84,6 +84,7 @@ async def test_pipeline_marks_failed_on_llm_error(job, store, tmp_path):
         raise openai.BadRequestError("Budget has been exceeded! Current cost: 5.1", response=resp, body=None)
     j, _ = await go(job, store, run_agent, tmp_path)
     assert j.state == "failed" and "budget" in j.error.lower()
+    assert "uv run workshop checkpoint 02-dashboard-built" in j.error  # every failure offers the way forward
 
 
 async def test_pipeline_rate_limit_message(job, store, tmp_path):
@@ -123,3 +124,17 @@ def test_train_errors_are_summarised():
     out = ('noise\n{"event_info": "Project validation found 1 problem(s):\\n  - [x] Skill bad: Unknown key(s): id", '
            '"level": "error"}\nmore noise')
     assert "Unknown key(s): id" in train_errors(out)
+
+
+async def test_a_passed_dashboard_gets_the_example_trip(job, store, tmp_path):
+    seeded = []
+
+    async def seed(url):
+        seeded.append(url)
+        return True
+
+    run_agent, _ = scripted(report(True))
+    await run_job(job, store, run_agent=run_agent, host=FakeHost(), workers=FakeWorkers(),
+                  workspace_base=tmp_path / "ws", seed=seed)
+    assert seeded == ["http://localhost:8600"]
+    assert any("example" in e.text.lower() for e in store.get(job.id).events)

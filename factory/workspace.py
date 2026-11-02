@@ -57,6 +57,9 @@ class WorkspaceTools:
         argv = shlex.split(cmd)
         if not argv or argv[0] not in ALLOWED_COMMANDS:
             return f"Command not allowed. Allowed: {', '.join(sorted(ALLOWED_COMMANDS))}."
+        for arg in argv[1:]:
+            if arg.startswith("/") or ".." in Path(arg).parts or arg.startswith("~") or arg == "-c":
+                return "Refused: commands may only use relative paths inside the workspace (no '/', '..', '~' or -c)."
         proc = await asyncio.create_subprocess_exec(*argv, cwd=self.root, stdout=asyncio.subprocess.PIPE,
                                                     stderr=asyncio.subprocess.STDOUT)
         try:

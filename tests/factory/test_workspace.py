@@ -58,3 +58,12 @@ def test_prepare_workspace_mantle_sets_travel_mcp(tmp_path):
     text = (root / "integrations.yml").read_text()
     assert "name: travel" in text and "${OPENAI_BASE_URL}" in text
     assert (root / "skills" / "placeholder" / "skill.md").exists()
+
+
+async def test_run_command_refuses_arguments_outside_the_workspace(tmp_path):
+    from factory.workspace import WorkspaceTools
+    ws = WorkspaceTools(tmp_path)
+    for cmd in ("cat ../../.env", "cat /etc/passwd", "find / -name x", "grep -r KEY ..", "python -c 'print(1)'"):
+        out = await ws.run_command(cmd)
+        assert out.startswith("Refused"), (cmd, out)
+    assert (await ws.run_command("ls .")).startswith("exit=0")

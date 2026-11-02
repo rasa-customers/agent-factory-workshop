@@ -31,3 +31,11 @@ def test_unknown_checkpoint_lists_valid_names(repo, tmp_path):
     with pytest.raises(SystemExit) as e:
         install_checkpoint("99-nope", repo=repo, workspace=tmp_path / "ws")
     assert all(n in str(e.value) for n in CHECKPOINTS)
+
+
+def test_watch_reports_failure_when_a_service_dies():
+    # systemd only restarts the cloud machine's stack (Restart=on-failure) if `workshop up` exits non-zero
+    import subprocess, sys
+    from workshop.procs import watch
+    dead = subprocess.Popen([sys.executable, "-c", "pass"]); dead.wait()
+    assert watch([dead]) == 1

@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NYC Trip Dashboard</title>
+  <title>Flight Dashboard — NYC Trip</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="brand__title">Trip Dashboard</div>
-      <div class="brand__subtitle">Live flight, landing weather, meeting, and on-time verdict</div>
+      <div class="brand__title">Flight Dashboard</div>
+      <div class="brand__subtitle">Trip to New York • Live updates</div>
     </div>
-    <div class="status" id="connStatus" aria-live="polite">
-      <span class="dot" id="connDot" aria-hidden="true"></span>
-      <span class="status__text" id="connText">Connecting…</span>
+    <div class="actions">
+      <button id="btnClear" class="btn btn--ghost" type="button" title="Clear dashboard">Clear</button>
     </div>
   </header>
 
@@ -22,46 +21,39 @@
     <section class="panel" id="panel-flight" aria-labelledby="h-flight">
       <div class="panel__head">
         <h2 class="panel__title" id="h-flight">Flight</h2>
-        <div class="panel__meta" id="flightMeta"></div>
+        <div class="panel__meta" id="meta-flight">Waiting for flight details…</div>
       </div>
-      <div class="panel__body" id="flightBody">
-        <div class="empty">Waiting for flight details…</div>
-      </div>
+      <div class="panel__body" id="body-flight"></div>
     </section>
 
     <section class="panel" id="panel-weather" aria-labelledby="h-weather">
       <div class="panel__head">
         <h2 class="panel__title" id="h-weather">Weather when you land</h2>
-        <div class="panel__meta" id="weatherMeta"></div>
+        <div class="panel__meta" id="meta-weather">Waiting for landing weather…</div>
       </div>
-      <div class="panel__body" id="weatherBody">
-        <div class="empty">Waiting for landing weather…</div>
-      </div>
+      <div class="panel__body" id="body-weather"></div>
     </section>
 
     <section class="panel" id="panel-meeting" aria-labelledby="h-meeting">
       <div class="panel__head">
         <h2 class="panel__title" id="h-meeting">Your meeting</h2>
-        <div class="panel__meta" id="meetingMeta"></div>
+        <div class="panel__meta" id="meta-meeting">Waiting for meeting details…</div>
       </div>
-      <div class="panel__body" id="meetingBody">
-        <div class="empty">Waiting for meeting details…</div>
-      </div>
+      <div class="panel__body" id="body-meeting"></div>
     </section>
 
-    <section class="panel panel--verdict" id="panel-verdict" aria-labelledby="h-verdict">
+    <section class="panel" id="panel-verdict" aria-labelledby="h-verdict">
       <div class="panel__head">
         <h2 class="panel__title" id="h-verdict">Will you make it?</h2>
-        <div class="panel__meta" id="verdictMeta"></div>
+        <div class="panel__meta" id="meta-verdict">Waiting for timing verdict…</div>
       </div>
-      <div class="panel__body" id="verdictBody">
-        <div class="empty">Waiting for timing verdict…</div>
-      </div>
+      <div class="panel__body" id="body-verdict"></div>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="footer__hint">Updates live as the assistant learns more. Times shown in your local timezone.</div>
+  <footer class="foot">
+    <div class="status" id="connStatus">Connecting…</div>
+    <div class="status__hint">Updates stream live; page never reloads.</div>
   </footer>
 
   <script src="./app.js"></script>

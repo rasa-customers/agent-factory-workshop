@@ -45,7 +45,9 @@ It usually takes 1–3 minutes. You can also ask the foreman "how's it going?".
 ## Use it
 
 When it passes, the activity page and the foreman give you the dashboard link (`localhost:8600` on a
-laptop). It's waiting for data. Send it some from a terminal:
+laptop). The factory fills it with the workshop's example trip (the flight, live New York weather when
+you land, the meeting, and a verdict), so it's alive straight away. Press **Clear** to empty it, then send
+it data yourself from a terminal:
 
 ```bash
 curl -s localhost:8600/api/state -H 'content-type: application/json' \

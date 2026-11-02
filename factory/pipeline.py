@@ -12,6 +12,7 @@ from agents import RunContextWrapper, RunHooks, Runner
 
 from factory.agents import CheckReport, make_builder, make_checker
 from factory.checks.dashboard import probe_dashboard_tool
+from factory.example_data import seed_dashboard
 from factory.checks.mantle import dashboard_history_tool, rasa_tools_server, train_project_tool, travel_truth_server
 from factory.hosting import ArtifactHost, StartFailed
 from factory.jobs import Job, JobStore
@@ -73,7 +74,7 @@ def builder_input(spec: str, failures: list[str]) -> str:
             f"{bullet}")
 
 
-async def run_job(job: Job, store: JobStore, *, run_agent=Runner.run, host=None, workers=None,
+async def run_job(job: Job, store: JobStore, *, run_agent=Runner.run, host=None, workers=None, seed=None,
                   max_rounds: int = 3, workspace_base: Path = WORKSPACE) -> None:
     host = host or ArtifactHost()
     workers = workers or RealWorkers()
@@ -108,6 +109,9 @@ async def run_job(job: Job, store: JobStore, *, run_agent=Runner.run, host=None,
                 store.update(job.id, check_report=[i.model_dump() for i in rep.items])
                 if rep.passed:
                     await host.promote(job.kind, root)
+                    if job.kind == "dashboard":
+                        if await (seed or seed_dashboard)("http://localhost:8600"):
+                            say("factory", "Filled the dashboard with the workshop's example trip so you can see it live.")
                     store.update(job.id, state="passed", result_url=url, summary=summary)
                     say("factory", f"Passed in round {rnd}. Open it: {url}")
                     return
@@ -115,8 +119,9 @@ async def run_job(job: Job, store: JobStore, *, run_agent=Runner.run, host=None,
         missing = "; ".join(failures) or "the checker did not pass it"
         store.update(job.id, state="failed",
                      error=(f"Still failing after {max_rounds} rounds: {missing}. "
-                            f'To carry on with a known-good version, run "workshop checkpoint {CHECKPOINT[job.kind]}".'))
+                            f'To carry on with a known-good version, run "uv run workshop checkpoint {CHECKPOINT[job.kind]}".'))
         say("factory", "Out of rounds — marked failed.")
     except Exception as e:  # noqa: BLE001 — every failure must end as a readable state for the foreman
-        store.update(job.id, state="failed", error=explain(e))
+        store.update(job.id, state="failed", error=f"{explain(e)} To carry on with a known-good version, run "
+                                                   f'"uv run workshop checkpoint {CHECKPOINT[job.kind]}".')
         say("factory", f"Stopped: {explain(e)}")

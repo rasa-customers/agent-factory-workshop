@@ -49,6 +49,9 @@ def checkpoint(name: str) -> int:
     kind, dest = install_checkpoint(name)
     print(f"Installed checkpoint {name} → {dest.relative_to(REPO)}; starting it…")
     url = asyncio.run(ArtifactHost().start(kind, dest))
+    if kind == "dashboard":
+        from factory.example_data import seed_dashboard
+        asyncio.run(seed_dashboard("http://localhost:8600"))
     print(f"Ready: {url}")
     return 0
 
@@ -105,11 +108,9 @@ def up() -> int:
 │  Logs:                  workspace/logs/
 │  Stop everything:       Ctrl-C
 └──────────────────────────────────────────────────────────────────────""")
+    code = 0
     try:
-        watched = [procs[0], procs[1], procs[3]]  # the factory replaces the dashboard process when it builds one
-        while all(p.poll() is None for p in watched):
-            time.sleep(1)
-        print("A service stopped unexpectedly — check workspace/logs/.")
+        code = watch([procs[0], procs[1], procs[3]])  # the factory replaces the dashboard process when it builds one
     except KeyboardInterrupt:
         print("\nStopping…")
     finally:
@@ -120,4 +121,12 @@ def up() -> int:
                 pass
         for port in (5006,):
             free_port(port)
-    return 0
+    return code
+
+
+def watch(procs: list) -> int:
+    """Wait while every watched service runs; 1 if one stops (so systemd restarts the stack)."""
+    while all(p.poll() is None for p in procs):
+        time.sleep(1)
+    print("A service stopped unexpectedly — check workspace/logs/.")
+    return 1

@@ -1,6 +1,8 @@
 """The workshop portal: email in → capped LLM key, license link, and a local or cloud setup."""
 from __future__ import annotations
 
+import asyncio
+
 import os
 import re
 import secrets
@@ -42,26 +44,38 @@ def create_app(db: Db, minter: Any, pool: Any | None) -> FastAPI:
     def render(request: Request, name: str, **ctx: Any) -> HTMLResponse:
         return TEMPLATES.TemplateResponse(request, name, {"env": env, **ctx})
 
+    signup_lock = asyncio.Lock()
+
     @app.get("/", response_class=HTMLResponse)
-    async def home(request: Request):
+    async def home(request: Request, code: str = ""):
         if current(request):
             return RedirectResponse("/me", status_code=303)
-        return render(request, "index.html", error=None)
+        return render(request, "index.html", error=None, code=code[:64], need_code=bool(env("EVENT_CODE")))
 
     @app.post("/signup")
-    async def signup(request: Request, email: str = Form(...)):
+    async def signup(request: Request, email: str = Form(...), code: str = Form("")):
         email = email.strip().lower()
-        if not EMAIL.match(email):
-            resp = render(request, "index.html", error="That doesn't look like an email address.")
-            resp.status_code = 400
+
+        def refuse(msg: str, status: int) -> HTMLResponse:
+            resp = render(request, "index.html", error=msg, code=code[:64], need_code=bool(env("EVENT_CODE")))
+            resp.status_code = status
             return resp
-        a = db.attendee(email)
-        if a is None:
-            key = await minter.mint(email)
-            token = secrets.token_urlsafe(24)
-            db.add_attendee(email, key, token)
-        else:
-            token = a["session_token"]
+
+        if not EMAIL.match(email):
+            return refuse("That doesn't look like an email address.", 400)
+        event_code = env("EVENT_CODE")
+        if event_code and code.strip().lower() != event_code.strip().lower():
+            return refuse("That event code isn't right — it's on the slide, or ask a Rasa person.", 403)
+        async with signup_lock:  # look-up, mint and insert as one step: a double-click mints one key
+            a = db.attendee(email)
+            if a is None:
+                if len(db.attendees()) >= int(env("SIGNUP_CAP") or 150):
+                    return refuse("The workshop is full right now — ask a Rasa person to let you in.", 403)
+                key = await minter.mint(email)
+                token = secrets.token_urlsafe(24)
+                db.add_attendee(email, key, token)
+            else:
+                token = a["session_token"]
         r = RedirectResponse("/me", status_code=303)
         r.set_cookie("session", token, max_age=60 * 60 * 24 * 7, httponly=True, samesite="lax")
         return r

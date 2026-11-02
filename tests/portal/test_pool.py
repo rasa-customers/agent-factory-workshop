@@ -150,8 +150,9 @@ async def test_failed_launch_is_marked_failed_and_pool_recovers(db):
     pool = make_pool(db, provider, warm=2)
     await pool.tick()          # first launch fails: no crash, nothing half-made counted as active
     assert [v["state"] for v in db.vms("failed")] == ["failed"]
-    await pool.tick()          # backs off for a minute: no new failed rows
-    assert len(db.vms()) == 1
+    n = len(db.vms())          # launches run side by side: one failed, the other is launching
+    await pool.tick()          # backs off for a minute: no new rows at all
+    assert len(db.vms()) == n
     pool._retry_after = 0
     await pool.tick()          # later ticks keep working and fill the pool
     provider.ready_all()
@@ -170,3 +171,47 @@ async def test_ready_status_opens_repo_and_reports_whether_the_foreman_is_up(db,
     db.set_attendee("a@x.io", license="LIC"); provider.services_up_all()
     s = await pool.status_for("a@x.io")
     assert s["license"] is True and s["foreman_up"] is True
+
+
+async def test_machine_ids_are_not_guessable(db, provider):
+    import re
+    pool = make_pool(db, provider, warm=3)
+    await pool.tick()
+    ids = [v["id"] for v in db.vms()]
+    assert all(re.fullmatch(r"vm-[0-9a-f]{8}", i) for i in ids) and len(set(ids)) == 3
+
+
+async def test_assign_is_not_held_up_by_slow_readiness_checks(db):
+    import asyncio, time
+
+    class SlowProvider(FakeProvider):
+        async def is_ready(self, vm):
+            await asyncio.sleep(0.5)  # an EC2 call + health check timing out on a booting machine
+            return None
+
+    provider = SlowProvider()
+    pool = make_pool(db, provider, warm=4)
+    await pool.tick()                       # 4 machines launching
+    db.add_attendee("a@x.io", "sk", "t1")
+    ticking = asyncio.create_task(pool.tick())
+    await asyncio.sleep(0.05)
+    t0 = time.perf_counter()
+    vm = await pool.assign("a@x.io")
+    assert vm is not None and time.perf_counter() - t0 < 0.2
+    started = time.perf_counter(); await ticking
+    assert time.perf_counter() - started < 0.6  # the four checks ran side by side, not one after another
+
+
+async def test_a_failed_router_update_is_retried_next_tick(db, provider):
+    pushes = []
+
+    async def flaky_push(vms):
+        pushes.append(len(vms))
+        if len(pushes) == 1:
+            raise RuntimeError("caddy restarting")
+
+    pool = Pool(db, provider, warm=1, ceiling=5, domain="fw.example", on_change=flaky_push)
+    await pool.tick(); provider.ready_all()
+    await pool.tick()   # becomes ready, push fails (must not raise or skip refilling)
+    await pool.tick()   # nothing new became ready, but the failed push is retried
+    assert pushes == [1, 1]

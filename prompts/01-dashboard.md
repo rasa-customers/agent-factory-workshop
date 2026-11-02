@@ -26,3 +26,4 @@ label/value rows so nothing is ever hidden. Format ISO times as local clock time
 Make it look good on a projector: dark background, large type, high contrast, a highlight when a panel
 changes.
 Panels grow to fit their content (never clip or cut text off) and the page scrolls if it has to.
+A small "Clear" button in a corner empties every panel back to its waiting state (`POST ./api/reset`).

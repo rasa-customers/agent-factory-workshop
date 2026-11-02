@@ -5,8 +5,12 @@
 <div class="card">
   <h2>Get your workshop keys</h2>
   <p class="muted">Enter your email and you'll get an LLM key for today plus everything you need to start.</p>
-  <form method="post" action="/signup">
+  <form method="post" action="/signup" onsubmit="this.querySelector('button').disabled = true">
     <input type="email" name="email" placeholder="you@company.com" required autofocus autocomplete="email">
+    {% if need_code %}
+      {% if code %}<input type="hidden" name="code" value="{{ code }}">
+      {% else %}<input type="text" name="code" placeholder="Event code (on the slide)" required autocomplete="off">{% endif %}
+    {% endif %}
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <div class="row"><button type="submit">Continue</button></div>
   </form>

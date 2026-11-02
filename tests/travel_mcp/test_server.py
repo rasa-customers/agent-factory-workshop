@@ -43,3 +43,10 @@ async def test_update_dashboard_reports_unreachable_dashboard(call, respx_mock):
     respx_mock.post(f"{DASH}/api/state").mock(side_effect=httpx.ConnectError("refused"))
     r = await call("update_dashboard", {"panel": "flight", "data": {}})
     assert r["ok"] is False and "dashboard" in r["error"].lower()
+
+
+async def test_update_dashboard_returns_the_link_people_can_open(call, respx_mock, monkeypatch):
+    monkeypatch.setenv("DASHBOARD_PUBLIC_URL", "https://vm-ab12cd34-dashboard.example")
+    respx_mock.post(f"{DASH}/api/state").mock(return_value=httpx.Response(200, json={}))
+    r = await call("update_dashboard", {"panel": "flight", "data": {"x": 1}})
+    assert r["dashboard_url"] == "https://vm-ab12cd34-dashboard.example/"

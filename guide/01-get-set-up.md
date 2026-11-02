@@ -2,7 +2,8 @@
 
 ## In the room: the portal
 
-Go to **https://portal.factory-workshop.playground-cse.rasa-dev.io** and enter your email. You get:
+Go to **https://portal.factory-workshop.playground-cse.rasa-dev.io** and enter your email (and the event code
+`darkfactory` if it asks; the QR code on the first slide fills it in for you). You get:
 
 1. **An LLM key** — capped for the workshop and switched off afterwards.
 2. **A Rasa developer license** — request one at

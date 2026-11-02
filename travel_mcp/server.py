@@ -53,14 +53,16 @@ async def estimate_travel_minutes(origin: str, destination_address: str, depart_
 
 @mcp.tool()
 async def update_dashboard(panel: Literal["flight", "weather", "meeting", "verdict"], data: dict) -> dict:
-    """Show information on the traveller's dashboard. Panels: flight, weather, meeting, verdict."""
+    """Show information on the traveller's dashboard. Panels: flight, weather, meeting, verdict.
+    Returns `dashboard_url`: the link the traveller opens to see it."""
     entry: dict[str, Any] = {"ts": time.time(), "panel": panel, "data": data, "ok": False}
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             r = await client.post(f"{DASHBOARD_URL}/api/state", json={"panel": panel, "data": data})
             r.raise_for_status()
         entry["ok"] = True
-        result: dict[str, Any] = {"ok": True}
+        public = os.environ.get("DASHBOARD_PUBLIC_URL", "http://localhost:8600").rstrip("/") + "/"
+        result: dict[str, Any] = {"ok": True, "dashboard_url": public}
     except Exception as e:  # noqa: BLE001 — report any failure to the agent in plain words
         result = {"ok": False, "error": f"Couldn't reach the dashboard at {DASHBOARD_URL}: {e}"}
     DASHBOARD_HISTORY.append(entry)

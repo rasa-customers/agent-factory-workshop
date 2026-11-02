@@ -27,7 +27,7 @@ A build takes about 2–5 minutes.
 ## Use it
 
 When it passes you get a link to your new agent in the Inspector (`localhost:5006` on a laptop). Open
-the dashboard next to it, then say:
+the dashboard next to it (the agent also gives you a link to it in its first reply), then say:
 
 > I'm flying to New York. Check my flight, show me the weather when I land, and help me work out whether
 > I'll make my meeting.

@@ -12,6 +12,9 @@ model_list:
 litellm_settings:
   drop_params: true
   request_timeout: 300
+  # Ceiling on the whole proxy, whatever happens to the per-attendee keys (~50 people x $5 is ~$250).
+  max_budget: 400
+  budget_duration: 30d
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

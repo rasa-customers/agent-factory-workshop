@@ -53,3 +53,48 @@ def test_admin_shows_counts(client):
     client.post("/choose", data={"choice": "local"})
     page = client.get("/admin", auth=("admin", "pw")).text
     assert "1 signed up" in page and "1 local" in page
+
+
+def test_event_code_required_when_set(db, minter, monkeypatch):
+    from fastapi.testclient import TestClient
+    from infra.portal.app import create_app
+    monkeypatch.setenv("EVENT_CODE", "nyc26")
+    c = TestClient(create_app(db=db, minter=minter, pool=None))
+    assert "nyc26" not in c.get("/").text                      # the code isn't leaked by the page itself
+    assert 'value="nyc26"' in c.get("/?code=nyc26").text        # the QR/link pre-fills it
+    r = c.post("/signup", data={"email": "a@x.io"}, follow_redirects=False)
+    assert r.status_code == 403 and minter.calls == 0
+    r = c.post("/signup", data={"email": "a@x.io", "code": "NYC26 "}, follow_redirects=False)
+    assert r.status_code == 303 and minter.calls == 1
+
+
+def test_signup_cap_blocks_new_emails_but_not_returning_ones(db, minter, monkeypatch):
+    from fastapi.testclient import TestClient
+    from infra.portal.app import create_app
+    monkeypatch.setenv("SIGNUP_CAP", "1")
+    c = TestClient(create_app(db=db, minter=minter, pool=None))
+    assert c.post("/signup", data={"email": "a@x.io"}, follow_redirects=False).status_code == 303
+    r = c.post("/signup", data={"email": "b@x.io"}, follow_redirects=False)
+    assert r.status_code == 403 and "Rasa person" in r.text and minter.calls == 1
+    assert c.post("/signup", data={"email": "A@x.io"}, follow_redirects=False).status_code == 303
+
+
+async def test_double_submit_mints_one_key(db, monkeypatch):
+    import asyncio
+    import httpx
+    from infra.portal.app import create_app
+
+    class SlowMinter:
+        calls = 0
+        async def mint(self, email):
+            SlowMinter.calls += 1
+            await asyncio.sleep(0.05)
+            return f"sk-{SlowMinter.calls}"
+        async def spend(self, key):
+            return 0.0
+
+    app = create_app(db=db, minter=SlowMinter(), pool=None)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+        r1, r2 = await asyncio.gather(c.post("/signup", data={"email": "a@x.io"}),
+                                      c.post("/signup", data={"email": "a@x.io"}))
+    assert r1.status_code == r2.status_code == 303 and SlowMinter.calls == 1

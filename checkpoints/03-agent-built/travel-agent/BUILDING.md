@@ -30,9 +30,10 @@ What each tool does (they already know the traveller — **never ask the user fo
 | `get_meeting` | none | `title`, `start` (ISO time), `address` |
 | `get_weather` | `location` (e.g. "New York"), `at` (ISO time, e.g. the flight's `estimated_arrival`) | `temperature_c`, `condition`, wind/precipitation |
 | `estimate_travel_minutes` | `origin` (e.g. "JFK"), `destination_address`, `depart_at` (ISO), `mode`: `"car"` or `"subway"` only | `minutes`, `arrives_at` (ISO clock time you'd get there), `note` |
-| `update_dashboard` | `panel`: `flight` \| `weather` \| `meeting` \| `verdict`; `data`: a JSON object | `{ok}` |
+| `update_dashboard` | `panel`: `flight` \| `weather` \| `meeting` \| `verdict`; `data`: a JSON object | `{ok, dashboard_url}`: the link the traveller opens |
 
-The dashboard shows whatever keys you put in `data`. For `verdict` use `{status: yes|tight|no, slack_minutes, reason}`.
+The dashboard shows whatever keys you put in `data`. Share `dashboard_url` with the traveller as a Markdown link,
+`[Open your dashboard](...)` (the chat turns the first Markdown link in a message into a button). For `verdict` use `{status: yes|tight|no, slack_minutes, reason}`.
 
 Tip: leave the airport 15 minutes after `estimated_arrival` (pass that as `depart_at`), then compare
 `arrives_at` with the meeting `start` — no clock arithmetic needed beyond that.

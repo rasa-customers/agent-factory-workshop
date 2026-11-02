@@ -43,6 +43,8 @@ services:
       WARM: ${WARM:-10}
       CEILING: ${CEILING:-60}
       CLOUD_VMS: ${CLOUD_VMS:-on}
+      EVENT_CODE: ${EVENT_CODE:-}
+      SIGNUP_CAP: ${SIGNUP_CAP:-150}
       AWS_DEFAULT_REGION: us-east-1
     volumes: [portal-data:/data]
     depends_on: [litellm, caddy]
