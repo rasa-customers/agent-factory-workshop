@@ -13,6 +13,12 @@ from pathlib import Path
 
 REPO = Path("/home/workshop/agent-factory-workshop")
 CODE_SERVER_CONFIG = Path("/home/workshop/.config/code-server/config.yaml")
+EDITOR_SETTINGS = Path("/home/workshop/.local/share/code-server/User/settings.json")
+# The workshop's AI lives in the foreman; the editor's own chat panel would only confuse people.
+EDITOR = {"workbench.startupEditor": "readme", "security.workspace.trust.enabled": False,
+          "terminal.integrated.cwd": "/home/workshop/agent-factory-workshop",
+          "chat.disableAIFeatures": True, "chat.commandCenter.enabled": False,
+          "workbench.secondarySideBar.defaultVisibility": "hidden"}
 SERVICES = {"code": None, "foreman": 5005, "agent": 5006, "dashboard": 8600, "factory": 8800}
 
 
@@ -56,6 +62,9 @@ def apply(cfg: dict, vm_id: str, domain: str) -> None:
         cs.write_text(text)
         subprocess.run(["chown", "-R", "workshop:workshop", str(cs.parent)])
         subprocess.run(["systemctl", "restart", "code-server@workshop"])
+    EDITOR_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+    EDITOR_SETTINGS.write_text(json.dumps(EDITOR, indent=1))  # code-server picks this up without a restart
+    subprocess.run(["chown", "-R", "workshop:workshop", str(EDITOR_SETTINGS.parent)])
     # workshop-up may have hit systemd's start limit while the license was missing
     subprocess.run(["systemctl", "reset-failed", "workshop-up"])
     subprocess.run(["systemctl", "restart", "workshop-up"])

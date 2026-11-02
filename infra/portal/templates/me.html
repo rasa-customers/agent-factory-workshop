@@ -42,7 +42,8 @@ OPENAI_BASE_URL={{ env("PROXY_BASE_URL") }}</pre>
       async function poll() {
         const r = await fetch('/me/vm'); const s = await r.json(); const el = document.getElementById('vm');
         if (s.state === 'ready') {
-          const editor = '<p><a target="_blank" href="' + s.url + '">Open the code editor</a> (password <code>' + s.password + '</code>) to see the files, a terminal and the logs.</p>';
+          const editor = '<p><a target="_blank" href="' + s.url + '">Open the code editor</a> to see the files, a terminal and the logs. ' +
+            '<span style="white-space:nowrap">Password: <code>' + s.password + '</code><button type="button" class="copy" data-copy="' + s.password + '">Copy</button></span></p>';
           if (s.foreman_up) {
             el.innerHTML = '<p class="ok">Your machine is ready and everything is running.</p>' +
               '<p><a class="button" target="_blank" href="' + s.foreman_url + '">Talk to the foreman →</a></p>' + editor;
@@ -60,6 +61,12 @@ OPENAI_BASE_URL={{ env("PROXY_BASE_URL") }}</pre>
         setTimeout(poll, 5000);
       }
       poll();
+      document.addEventListener('click', async (e) => {  // one handler: the block above is redrawn while it starts
+        const b = e.target.closest('[data-copy]'); if (!b) return;
+        try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; }
+        catch { b.textContent = 'Select and copy it'; }
+        setTimeout(() => { b.textContent = 'Copy'; }, 1500);
+      });
     </script>
   {% endif %}
 </div>

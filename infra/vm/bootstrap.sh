@@ -26,7 +26,7 @@ cert: false
 EOT
 mkdir -p /home/workshop/.local/share/code-server/User
 cat > /home/workshop/.local/share/code-server/User/settings.json <<'EOT'
-{"workbench.startupEditor": "readme", "security.workspace.trust.enabled": false, "terminal.integrated.cwd": "/home/workshop/agent-factory-workshop"}
+{"workbench.startupEditor": "readme", "security.workspace.trust.enabled": false, "terminal.integrated.cwd": "/home/workshop/agent-factory-workshop", "chat.disableAIFeatures": true, "chat.commandCenter.enabled": false, "workbench.secondarySideBar.defaultVisibility": "hidden"}
 EOT
 chown -R workshop:workshop /home/workshop/.config /home/workshop/.local
 systemctl enable code-server@workshop
