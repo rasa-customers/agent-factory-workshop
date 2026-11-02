@@ -34,3 +34,14 @@ async def test_subscribe_replays_then_streams(store):
     assert (await it.__anext__()).text == "first"
     store.add_event(job.id, "checker", "second")
     assert (await it.__anext__()).text == "second"
+
+
+def test_jobs_cut_off_by_a_restart_are_marked_failed_on_reload(store, tmp_path):
+    job = store.create("dashboard", "spec")
+    store.update(job.id, state="building", round=1)
+    done = store.create("dashboard", "spec2")
+    store.update(done.id, state="passed")
+    reloaded = JobStore(tmp_path / "jobs")
+    j = reloaded.get(job.id)
+    assert j.state == "failed" and "restarted" in j.error and "start" in j.error
+    assert reloaded.get(done.id).state == "passed"

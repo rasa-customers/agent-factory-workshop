@@ -44,7 +44,13 @@ class JobStore:
         for f in self.root.glob("*.json"):
             d = json.loads(f.read_text())
             d["events"] = [Event(**e) for e in d["events"]]
-            self._jobs[d["id"]] = Job(**d)
+            job = Job(**d)
+            if job.state not in ("passed", "failed"):  # this process can't resume a build another one started
+                job.state = "failed"
+                job.error = ("The factory restarted while this was building, so the build stopped. "
+                             "Ask me to start it again.")
+                self._save(job)
+            self._jobs[job.id] = job
 
     def _save(self, job: Job) -> None:
         (self.root / f"{job.id}.json").write_text(json.dumps(asdict(job), indent=1))
