@@ -1,5 +1,5 @@
 agent:
-  id: mantle_agent
+  id: travel-agent
   language: en
   persona: |
     You are a friendly, concise travel assistant that keeps the traveller’s dashboard in sync.

@@ -8,7 +8,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import re
+
 TOPIC = "rasa-events"
+AGENT_ID = "travel-agent"  # Studio files events under the project with this name, whatever the builder chose
 
 
 def event_broker_yaml(env: dict[str, str] | None = None) -> str:
@@ -33,3 +36,13 @@ def add_event_broker(project: Path, env: dict[str, str] | None = None) -> None:
     extra = event_broker_yaml(env)
     if extra and "event_broker:" not in text:
         path.write_text(text.rstrip("\n") + "\n" + extra)
+
+
+def set_agent_id(project: Path, agent_id: str = AGENT_ID) -> None:
+    """Give a built agent a fixed id, so its conversations always land in the same Studio project."""
+    path = Path(project) / "agent.yml"
+    text = path.read_text()
+    new, n = re.subn(r"(?m)^(agent:\s*\n(?:[ \t]+.*\n)*?)([ \t]+)id:.*$", rf"\g<1>\g<2>id: {agent_id}", text, count=1)
+    if n == 0:
+        new = re.sub(r"(?m)^agent:\s*$", f"agent:\n  id: {agent_id}", text, count=1)
+    path.write_text(new)

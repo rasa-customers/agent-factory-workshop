@@ -41,3 +41,12 @@ def test_the_foreman_keeps_its_base_config_in_git():
     repo = Path(__file__).parents[2]
     assert (repo / "foreman" / "integrations.base.yml").exists()
     assert "foreman/integrations.yml" in (repo / ".gitignore").read_text()
+
+
+def test_built_agents_always_report_as_travel_agent(tmp_path):
+    from workshop.studio import AGENT_ID, set_agent_id
+    (tmp_path / "agent.yml").write_text("agent:\n  id: whatever-the-builder-chose\n  language: en\n\norchestrator:\n  model_group: main_model\n")
+    set_agent_id(tmp_path)
+    text = (tmp_path / "agent.yml").read_text()
+    assert f"  id: {AGENT_ID}\n" in text and "whatever" not in text and AGENT_ID == "travel-agent"
+    assert "language: en" in text and "model_group: main_model" in text
