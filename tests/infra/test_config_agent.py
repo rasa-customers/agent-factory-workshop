@@ -28,7 +28,7 @@ def test_public_urls_code_is_bare_vm_host():
 
 def test_render_caddyfile_routes():
     vms = [{"id": "vm-01", "ip": "10.0.0.5", "state": "ready"}, {"id": "vm-02", "ip": None, "state": "launching"}]
-    text = render_caddyfile(vms, DOMAIN, cert="/c/f.pem", key="/c/k.pem")
+    text = render_caddyfile(vms, DOMAIN)
     assert "vm-01.fw.example" in text and "10.0.0.5:8080" in text
     assert "vm-01-foreman.fw.example" in text and "10.0.0.5:5005" in text
     assert "vm-01-agent.fw.example" in text and "10.0.0.5:5006" in text
@@ -36,4 +36,6 @@ def test_render_caddyfile_routes():
     assert "vm-01-factory.fw.example" in text and "10.0.0.5:8800" in text
     assert "vm-02" not in text
     assert "portal.fw.example" in text and "llm.fw.example" in text
-    assert "tls /c/f.pem /c/k.pem" in text
+    # TLS ends at the load balancer (ACM wildcard); Caddy serves plain HTTP and routes by Host
+    assert "http://portal.fw.example" in text and "http://vm-01-foreman.fw.example" in text
+    assert "tls " not in text

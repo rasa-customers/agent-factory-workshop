@@ -4,5 +4,6 @@
   auto_https off
 }
 :80 {
+  respond /healthz "ok" 200
   respond "Agent Factory Workshop — starting up" 200
 }

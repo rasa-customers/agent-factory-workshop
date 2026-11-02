@@ -3,6 +3,7 @@
 #   REPO_URL=https://github.com/<org>/agent-factory-workshop bash bootstrap.sh
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
+export HOME="${HOME:-/root}"   # cloud-init runs user data without HOME; installers need it
 apt-get update
 apt-get install -y git curl build-essential lsof
 

@@ -31,7 +31,12 @@ def parent_zone_id(r53) -> str:
     return zone["Id"].split("/")[-1]
 
 
+def in_domain(name: str) -> bool:
+    """True only for DOMAIN itself or a name under it (label boundary), never the forbidden zone."""
+    n = name.replace("\\052", "*").rstrip(".").lower()
+    return (n == DOMAIN or n.endswith("." + DOMAIN)) and not (n + ".").endswith(FORBIDDEN_ZONE)
+
+
 def assert_safe_record(name: str) -> None:
-    name = name.rstrip(".") + "."
-    if not name.endswith(DOMAIN + ".") or name.endswith(FORBIDDEN_ZONE):
+    if not in_domain(name):
         raise SystemExit(f"Refusing to touch DNS record {name!r}: outside {DOMAIN}")

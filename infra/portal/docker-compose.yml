@@ -24,10 +24,9 @@ services:
   caddy:
     image: caddy:2
     command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
-    ports: ["80:80", "443:443"]
+    ports: ["80:80"]   # TLS ends at the load balancer (ACM wildcard cert)
     volumes:
       - ./Caddyfile.bootstrap:/etc/caddy/Caddyfile:ro
-      - ./certs:/certs:ro   # fullchain.pem + privkey.pem for *.${DOMAIN}, copied in by provision.py
     restart: unless-stopped
 
   portal:

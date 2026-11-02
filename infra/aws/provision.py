@@ -1,9 +1,9 @@
 """Provision the workshop on AWS (idempotent). Run steps individually or `all`:
 
     uv run python -m infra.aws.provision network   # security groups + SSH key
-    uv run python -m infra.aws.provision cert      # wildcard TLS cert via DNS-01 (Docker + certbot)
+    uv run python -m infra.aws.provision cert      # ACM wildcard cert, validated by DNS
     uv run python -m infra.aws.provision bake      # build the cloud-machine image + launch template
-    uv run python -m infra.aws.provision portal    # portal host + Elastic IP + wildcard DNS + IAM role
+    uv run python -m infra.aws.provision portal    # portal host + load balancer (TLS) + wildcard DNS + IAM role
     uv run python -m infra.aws.provision deploy    # copy the stack to the portal host and start it
 
 Everything is tagged project=factory-workshop and lives under factory-workshop.playground-cse.rasa-dev.io.
@@ -42,12 +42,57 @@ def my_ip() -> str:
     return urllib.request.urlopen("https://checkip.amazonaws.com", timeout=10).read().decode().strip()
 
 
+VPC_CIDR = "10.77.0.0/16"
+SUBNETS = {"us-east-1a": "10.77.0.0/20", "us-east-1b": "10.77.16.0/20"}
+
+
+def _tagged(resource: str, name: str) -> list[dict]:
+    return [{"ResourceType": resource, "Tags": tags(name)}]
+
+
+def workshop_vpc() -> tuple[str, list[str]]:
+    """The workshop's own VPC (public subnets + internet gateway). Never uses or changes anyone else's network."""
+    found = ec2.describe_vpcs(Filters=[{"Name": "tag:project", "Values": ["factory-workshop"]}])["Vpcs"]
+    if found:
+        vpc = found[0]["VpcId"]
+    else:
+        vpc = ec2.create_vpc(CidrBlock=VPC_CIDR, TagSpecifications=_tagged("vpc", "factory-workshop"))["Vpc"]["VpcId"]
+        ec2.get_waiter("vpc_available").wait(VpcIds=[vpc])
+        ec2.modify_vpc_attribute(VpcId=vpc, EnableDnsHostnames={"Value": True})
+        log(f"created VPC {vpc}")
+    igws = ec2.describe_internet_gateways(Filters=[{"Name": "attachment.vpc-id", "Values": [vpc]}])["InternetGateways"]
+    if igws:
+        igw = igws[0]["InternetGatewayId"]
+    else:
+        igw = ec2.create_internet_gateway(TagSpecifications=_tagged("internet-gateway", "factory-workshop"))["InternetGateway"]["InternetGatewayId"]
+        ec2.attach_internet_gateway(InternetGatewayId=igw, VpcId=vpc)
+    rts = ec2.describe_route_tables(Filters=[{"Name": "vpc-id", "Values": [vpc]}, {"Name": "tag:project", "Values": ["factory-workshop"]}])["RouteTables"]
+    if rts:
+        rt = rts[0]["RouteTableId"]
+    else:
+        rt = ec2.create_route_table(VpcId=vpc, TagSpecifications=_tagged("route-table", "factory-workshop-public"))["RouteTable"]["RouteTableId"]
+        ec2.create_route(RouteTableId=rt, DestinationCidrBlock="0.0.0.0/0", GatewayId=igw)
+    subnets = []
+    existing = {sn["AvailabilityZone"]: sn["SubnetId"] for sn in
+                ec2.describe_subnets(Filters=[{"Name": "vpc-id", "Values": [vpc]}])["Subnets"]}
+    for az, cidr in SUBNETS.items():
+        sid = existing.get(az)
+        if not sid:
+            sid = ec2.create_subnet(VpcId=vpc, CidrBlock=cidr, AvailabilityZone=az,
+                                    TagSpecifications=_tagged("subnet", f"factory-workshop-{az}"))["Subnet"]["SubnetId"]
+            ec2.modify_subnet_attribute(SubnetId=sid, MapPublicIpOnLaunch={"Value": True})
+            ec2.associate_route_table(RouteTableId=rt, SubnetId=sid)
+        subnets.append(sid)
+    return vpc, subnets
+
+
 def default_vpc() -> str:
-    return ec2.describe_vpcs(Filters=[{"Name": "isDefault", "Values": ["true"]}])["Vpcs"][0]["VpcId"]
+    return workshop_vpc()[0]
 
 
 def sg(name: str) -> str | None:
-    r = ec2.describe_security_groups(Filters=[{"Name": "group-name", "Values": [name]}])["SecurityGroups"]
+    r = ec2.describe_security_groups(Filters=[{"Name": "group-name", "Values": [name]},
+                                             {"Name": "vpc-id", "Values": [default_vpc()]}])["SecurityGroups"]
     return r[0]["GroupId"] if r else None
 
 
@@ -92,25 +137,33 @@ def network() -> tuple[str, str]:
     return portal, vm
 
 
-def cert() -> None:
-    """Wildcard cert for *.DOMAIN using certbot's Route 53 plugin, with the current AWS credentials."""
-    creds = subprocess.run(["aws", "configure", "export-credentials", "--profile", PROFILE, "--format", "env-no-export"],
-                           capture_output=True, text=True, check=True).stdout
-    env = dict(line.split("=", 1) for line in creds.strip().splitlines())
-    le = REPO / "infra" / "portal" / "letsencrypt"
-    le.mkdir(exist_ok=True)
-    cmd = ["docker", "run", "--rm", "-v", f"{le}:/etc/letsencrypt"]
-    for k, v in env.items():
-        cmd += ["-e", f"{k}={v}"]
-    cmd += ["certbot/dns-route53", "certonly", "--dns-route53", "--non-interactive", "--agree-tos",
-            "--register-unsafely-without-email", "-d", f"*.{DOMAIN}", "--cert-name", DOMAIN]
-    subprocess.run(cmd, check=True)
-    CERT_DIR.mkdir(exist_ok=True)
-    live = le / "live" / DOMAIN
-    for f in ("fullchain.pem", "privkey.pem"):
-        (CERT_DIR / f).write_bytes((live / f).resolve().read_bytes() if (live / f).exists()
-                                   else (le / "archive" / DOMAIN / f.replace(".pem", "1.pem")).read_bytes())
-    log(f"certificate written to {CERT_DIR}")
+def cert() -> str:
+    """ACM wildcard cert for *.DOMAIN, validated by DNS inside our own subdomain. (The parent zone's CAA policy
+    allows wildcard certificates only from Amazon, so this is the one way to get one.) Returns the cert ARN."""
+    acm = s.client("acm")
+    for c in acm.list_certificates(CertificateStatuses=["PENDING_VALIDATION", "ISSUED"])["CertificateSummaryList"]:
+        if c["DomainName"] == f"*.{DOMAIN}":
+            arn = c["CertificateArn"]
+            break
+    else:
+        arn = acm.request_certificate(DomainName=f"*.{DOMAIN}", ValidationMethod="DNS",
+                                      Tags=[TAG, {"Key": "Name", "Value": "factory-workshop"}])["CertificateArn"]
+        log(f"requested certificate {arn}")
+    for _ in range(30):
+        opts = acm.describe_certificate(CertificateArn=arn)["Certificate"].get("DomainValidationOptions", [])
+        if opts and "ResourceRecord" in opts[0]:
+            break
+        time.sleep(2)
+    rr = opts[0]["ResourceRecord"]
+    assert_safe_record(rr["Name"])
+    r53 = s.client("route53")
+    r53.change_resource_record_sets(HostedZoneId=parent_zone_id(r53), ChangeBatch={"Changes": [{
+        "Action": "UPSERT", "ResourceRecordSet": {"Name": rr["Name"], "Type": rr["Type"], "TTL": 300,
+                                                  "ResourceRecords": [{"Value": rr["Value"]}]}}]})
+    log("validation record in place; waiting for the certificate (usually 1–5 min)…")
+    acm.get_waiter("certificate_validated").wait(CertificateArn=arn, WaiterConfig={"Delay": 15, "MaxAttempts": 60})
+    log(f"certificate issued: {arn}")
+    return arn
 
 
 def ubuntu_ami() -> str:
@@ -123,6 +176,9 @@ def wait_console(instance_id: str, marker: str, timeout_s: int = 1800) -> None:
         out = ec2.get_console_output(InstanceId=instance_id, Latest=True).get("Output", "") or ""
         if marker in out:
             return
+        if "Failed to run module scripts_user" in out:
+            tail = "\n".join(out.strip().splitlines()[-25:])
+            raise SystemExit(f"Bootstrap failed on {instance_id} (left running so you can SSH in):\n{tail}")
         time.sleep(20)
     raise SystemExit(f"Timed out waiting for {marker!r} on {instance_id}")
 
@@ -135,7 +191,7 @@ def bake() -> str:
                  (REPO / "infra" / "vm" / "bootstrap.sh").read_text() +
                  "\necho FACTORY_BAKE_DONE > /dev/console\n")
     inst = ec2.run_instances(ImageId=ubuntu_ami(), InstanceType=VM_TYPE, MinCount=1, MaxCount=1, KeyName="factory-workshop",
-                             SecurityGroupIds=[vm_sg], UserData=user_data,
+                             SecurityGroupIds=[vm_sg], SubnetId=workshop_vpc()[1][0], UserData=user_data,
                              BlockDeviceMappings=[{"DeviceName": "/dev/sda1", "Ebs": {"VolumeSize": 30, "VolumeType": "gp3"}}],
                              TagSpecifications=[{"ResourceType": "instance", "Tags": tags("factory-workshop-bake")}])["Instances"][0]
     iid = inst["InstanceId"]
@@ -147,7 +203,9 @@ def bake() -> str:
     ami = ec2.create_image(InstanceId=iid, Name=name, TagSpecifications=[{"ResourceType": "image", "Tags": tags(name)}])["ImageId"]
     ec2.get_waiter("image_available").wait(ImageIds=[ami], WaiterConfig={"Delay": 20, "MaxAttempts": 90})
     ec2.terminate_instances(InstanceIds=[iid])
-    data = {"ImageId": ami, "InstanceType": VM_TYPE, "KeyName": "factory-workshop", "SecurityGroupIds": [vm_sg],
+    data = {"ImageId": ami, "InstanceType": VM_TYPE, "KeyName": "factory-workshop",
+            "NetworkInterfaces": [{"DeviceIndex": 0, "SubnetId": workshop_vpc()[1][0], "Groups": [vm_sg],
+                                   "AssociatePublicIpAddress": True}],
             "BlockDeviceMappings": [{"DeviceName": "/dev/sda1", "Ebs": {"VolumeSize": 30, "VolumeType": "gp3"}}],
             "TagSpecifications": [{"ResourceType": "instance", "Tags": [TAG]}]}
     try:
@@ -196,42 +254,74 @@ def portal_instance() -> dict | None:
     return found[0] if found else None
 
 
+def load_balancer(portal_iid: str, portal_sg: str, cert_arn: str) -> dict:
+    """Internet-facing ALB in the workshop VPC: TLS with the ACM wildcard, forwarding HTTP to Caddy on the portal host."""
+    elb = s.client("elbv2")
+    vpc, subnets = workshop_vpc()
+    alb_sg = ensure_sg("factory-workshop-alb", "Agent Factory workshop load balancer")
+    allow(alb_sg, [{"IpProtocol": "tcp", "FromPort": p, "ToPort": p, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]} for p in (80, 443)])
+    allow(portal_sg, [{"IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "UserIdGroupPairs": [{"GroupId": alb_sg}]}])
+    try:
+        lb = elb.describe_load_balancers(Names=["factory-workshop"])["LoadBalancers"][0]
+    except ClientError:
+        lb = elb.create_load_balancer(Name="factory-workshop", Subnets=subnets, SecurityGroups=[alb_sg],
+                                      Scheme="internet-facing", Type="application", Tags=tags("factory-workshop"))["LoadBalancers"][0]
+        log(f"created load balancer {lb['DNSName']}")
+    arn = lb["LoadBalancerArn"]
+    # long-lived SSE streams and the Inspector's websocket
+    elb.modify_load_balancer_attributes(LoadBalancerArn=arn, Attributes=[{"Key": "idle_timeout.timeout_seconds", "Value": "3600"}])
+    try:
+        tg = elb.describe_target_groups(Names=["factory-workshop-portal"])["TargetGroups"][0]["TargetGroupArn"]
+    except ClientError:
+        tg = elb.create_target_group(Name="factory-workshop-portal", Protocol="HTTP", Port=80, VpcId=vpc, TargetType="instance",
+                                     HealthCheckPath="/healthz", Matcher={"HttpCode": "200"},
+                                     Tags=tags("factory-workshop-portal"))["TargetGroups"][0]["TargetGroupArn"]
+    elb.register_targets(TargetGroupArn=tg, Targets=[{"Id": portal_iid, "Port": 80}])
+    listeners = {l["Port"] for l in elb.describe_listeners(LoadBalancerArn=arn)["Listeners"]}
+    if 443 not in listeners:
+        elb.create_listener(LoadBalancerArn=arn, Protocol="HTTPS", Port=443, Certificates=[{"CertificateArn": cert_arn}],
+                            SslPolicy="ELBSecurityPolicy-TLS13-1-2-2021-06",
+                            DefaultActions=[{"Type": "forward", "TargetGroupArn": tg}], Tags=[TAG])
+    if 80 not in listeners:
+        elb.create_listener(LoadBalancerArn=arn, Protocol="HTTP", Port=80, Tags=[TAG], DefaultActions=[{
+            "Type": "redirect", "RedirectConfig": {"Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}])
+    return lb
+
+
 def portal() -> str:
     portal_sg, _ = network()
+    cert_arn = cert()
     profile = ensure_role()
     inst = portal_instance()
     if inst is None:
         user_data = "#!/bin/bash\ncurl -fsSL https://get.docker.com | sh\nusermod -aG docker ubuntu\n"
         inst = ec2.run_instances(ImageId=ubuntu_ami(), InstanceType=PORTAL_TYPE, MinCount=1, MaxCount=1,
-                                 KeyName="factory-workshop", SecurityGroupIds=[portal_sg], UserData=user_data,
-                                 IamInstanceProfile={"Name": profile},
+                                 KeyName="factory-workshop", SecurityGroupIds=[portal_sg], SubnetId=workshop_vpc()[1][0],
+                                 UserData=user_data, IamInstanceProfile={"Name": profile},
+                                 # the portal runs in Docker: containers need one extra hop to reach instance credentials
+                                 MetadataOptions={"HttpTokens": "required", "HttpPutResponseHopLimit": 2},
                                  BlockDeviceMappings=[{"DeviceName": "/dev/sda1", "Ebs": {"VolumeSize": 40, "VolumeType": "gp3"}}],
                                  TagSpecifications=[{"ResourceType": "instance", "Tags": tags("factory-workshop-portal")}])["Instances"][0]
         log(f"portal host {inst['InstanceId']} launching")
     iid = inst["InstanceId"]
     ec2.get_waiter("instance_running").wait(InstanceIds=[iid])
-    addrs = ec2.describe_addresses(Filters=[{"Name": "tag:Name", "Values": ["factory-workshop-portal"]}])["Addresses"]
-    if addrs:
-        alloc = addrs[0]
-    else:
-        alloc = ec2.allocate_address(Domain="vpc", TagSpecifications=[{"ResourceType": "elastic-ip", "Tags": tags("factory-workshop-portal")}])
-    ec2.associate_address(InstanceId=iid, AllocationId=alloc["AllocationId"])
-    ip = alloc["PublicIp"]
+    lb = load_balancer(iid, portal_sg, cert_arn)
     r53 = s.client("route53")
     name = f"*.{DOMAIN}"
     assert_safe_record(name)
     r53.change_resource_record_sets(HostedZoneId=parent_zone_id(r53), ChangeBatch={"Changes": [{
-        "Action": "UPSERT", "ResourceRecordSet": {"Name": name, "Type": "A", "TTL": 60, "ResourceRecords": [{"Value": ip}]}}]})
-    log(f"portal host {iid} at {ip}; {name} → {ip}")
-    return ip
+        "Action": "UPSERT", "ResourceRecordSet": {"Name": name, "Type": "A", "AliasTarget": {
+            "HostedZoneId": lb["CanonicalHostedZoneId"], "DNSName": lb["DNSName"], "EvaluateTargetHealth": False}}}]})
+    log(f"portal host {iid}; {name} → load balancer {lb['DNSName']}")
+    return lb["DNSName"]
 
 
 def deploy() -> None:
     inst = portal_instance() or sys.exit("No portal host yet — run the `portal` step.")
-    host = inst.get("PublicIpAddress") or sys.exit("Portal host has no public IP yet.")
+    host = inst.get("PublicIpAddress") or sys.exit("Portal host has no public IP yet.")  # SSH only; web traffic goes via the ALB
     env_file = REPO / "infra" / "portal" / ".env"
-    if not env_file.exists() or not (CERT_DIR / "fullchain.pem").exists():
-        sys.exit("Need infra/portal/.env (see .env.example) and infra/portal/certs/ (run `cert`).")
+    if not env_file.exists():
+        sys.exit("Need infra/portal/.env (see .env.example).")
     ssh = ["-i", str(KEY_PATH), "-o", "StrictHostKeyChecking=accept-new"]
     files = ["infra", "pyproject.toml"]
     subprocess.run(["rsync", "-az", "--delete", "--exclude", "letsencrypt", "--exclude", "__pycache__", "-e",
