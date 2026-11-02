@@ -1,0 +1,7 @@
+<!doctype html><html><body><div id="gate" style="font-size:40px">no flight yet</div>
+<script>
+const el=document.getElementById('gate'); let first=true;
+function render(s){ el.textContent = s.flight && s.flight.gate ? 'Gate ' + s.flight.gate : 'no flight yet';
+  if (!first) el.animate([{opacity:0, transform:'scale(.9)'}, {opacity:1, transform:'scale(1)'}], {duration: 400}); first=false; }
+new EventSource('api/events').addEventListener('state', e => render(JSON.parse(e.data)));
+</script></body></html>

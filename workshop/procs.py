@@ -18,7 +18,9 @@ WORKSPACE = REPO / "workspace"
 LOGS = WORKSPACE / "logs"
 CHECKPOINTS = {
     "02-dashboard-built": ("dashboard", "dashboard", "latest-dashboard"),
+    "02b-dashboard-extended": ("dashboard", "dashboard", "latest-dashboard"),
     "03-agent-built": ("mantle_agent", "travel-agent", "latest-agent"),
+    "03b-agent-extended": ("mantle_agent", "travel-agent", "latest-agent"),
 }
 
 

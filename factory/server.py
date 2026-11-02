@@ -76,14 +76,15 @@ def build_server(store: JobStore, runner: Runner, *, port: int = 8800) -> FastMC
         return launch(job)
 
     @mcp.tool()
-    async def revise_build(change: str, job_id: str = "") -> dict:
+    async def revise_build(change: str, kind: str = "", job_id: str = "") -> dict:
         """Change a finished build instead of starting over: the builder starts from what was built and the
         checker re-checks everything, including the change. change is one plain sentence describing what
-        the person wants different. job_id defaults to the most recent build."""
+        the person wants different. kind ("dashboard" or "mantle_agent") says which of their builds to
+        change; without it, the most recent one."""
         latest = store.latest()
         if not job_id and latest is not None and latest.state not in ("passed", "failed"):
             return {"error": "A build is still running. Wait for it to finish, then ask for the change."}
-        base = store.get(job_id) if job_id else store.latest(state="passed")
+        base = store.get(job_id) if job_id else store.latest(state="passed", kind=kind or None)
         if base is None or base.state != "passed":
             return {"error": "There is nothing finished to change yet. Start a build first, or wait for one "
                              "to pass."}
@@ -91,6 +92,36 @@ def build_server(store: JobStore, runner: Runner, *, port: int = 8800) -> FastMC
         job = store.create(base.kind, full_spec(base.kind, brief), brief=brief, based_on=base.id,
                            change=change.strip())
         store.add_event(job.id, "factory", f"Job received: change the {base.kind.replace('_', ' ')}.")
+        return launch(job)
+
+    @mcp.tool()
+    async def list_builds() -> dict:
+        """The person's builds, newest first: job_id, kind, state, what each one was (the brief's first line
+        or the change asked for), and result_url for the ones that passed."""
+        builds = []
+        for j in store.all()[:12]:
+            what = j.change or (j.brief.strip().splitlines() or [""])[0]
+            builds.append({"job_id": j.id, "kind": j.kind, "state": j.state, "what": what,
+                           "result_url": j.result_url if j.state == "passed" else None})
+        return {"builds": builds}
+
+    @mcp.tool()
+    async def get_brief(kind: str = "") -> dict:
+        """The brief behind the latest build (of this kind, if given), including every change asked for since."""
+        job = store.latest(kind=kind or None)
+        if job is None:
+            return {"error": "Nothing has been built yet."}
+        return {"job_id": job.id, "kind": job.kind, "brief": job.brief}
+
+    @mcp.tool()
+    async def restore_build(job_id: str) -> dict:
+        """Put an earlier build that passed back live (use list_builds to find it). Later changes build on it."""
+        base = store.get(job_id)
+        if base is None or base.state != "passed":
+            return {"error": "Only a build that passed can be restored. Use list_builds to pick one."}
+        job = store.create(base.kind, base.spec, brief=base.brief, based_on=base.id,
+                           change=f"Go back to build {base.id}.", restore=True)
+        store.add_event(job.id, "factory", f"Job received: put build {base.id} back live.")
         return launch(job)
 
     @mcp.tool()

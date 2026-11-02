@@ -28,5 +28,8 @@ yes / tight / no comes from `status`. Show any other fields as simple
 label/value rows so nothing is ever hidden. Show ISO times as the clock time written in them, which is local time where it happens:
 `2026-11-03T13:15:00-05:00` shows as 1:15 PM for every viewer, whatever their own time zone.
 
+The state also has a `route` key (from/to with lat/lon, mode, minutes) for a map. Show it only if the
+brief asks for a map.
+
 Panels grow to fit their content (never clip or cut text off) and the page scrolls if it has to.
 A small "Clear" button in a corner empties every panel back to its waiting state (`POST ./api/reset`).

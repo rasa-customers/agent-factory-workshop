@@ -25,6 +25,10 @@ def prepare_workspace(job: Job, base: Path = WORKSPACE) -> Path:
     if job.based_on and (Path(base) / job.based_on).is_dir():
         source = Path(base) / job.based_on
     shutil.copytree(source, root, ignore=shutil.ignore_patterns("__pycache__", "models", "cache", ".env"))
+    if source != TEMPLATES / TEMPLATE_FOR[job.kind]:  # a revision still gets the latest cheat sheet
+        for guide in ("BUILDING.md", "README.md"):
+            if (TEMPLATES / TEMPLATE_FOR[job.kind] / guide).exists():
+                shutil.copy(TEMPLATES / TEMPLATE_FOR[job.kind] / guide, root / guide)
     return root
 
 

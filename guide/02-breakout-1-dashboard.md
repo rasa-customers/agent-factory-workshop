@@ -71,6 +71,28 @@ The factory doesn't start over. The builder starts from the dashboard you're loo
 change, and the checker re-checks everything, your change included. Each change is its own build with
 its own activity page, usually a minute or two. Keep going until you like it.
 
+### Make it yours
+
+Pick one or two, in your own words:
+
+| Ask for | What the checker looks at |
+|---|---|
+| A new colour scheme ("Catppuccin Mocha", "airport departure board", "your company's colours") | The page's actual colours |
+| An animation when the verdict changes | Which elements animate right after an update |
+| A map of the route from the airport to the meeting | Whether a map draws, with tiles, markers and the route line |
+| A countdown to the meeting, or the minutes of slack as a big number | The text on the page |
+| A phone layout for the taxi | The page at phone width, with nothing spilling sideways |
+
+The map uses data the dashboard already receives (`route`: from, to, mode, minutes); in Breakout 2 your
+travel agent keeps it up to date.
+
+### More you can ask the foreman
+
+- **"Why did that fail?"** It reads you the checker's evidence.
+- **"What have I built?"** Every version, passed or failed.
+- **"Show me the brief."** Your brief plus every change since.
+- **"Go back to the version before the map."** Puts an earlier version back live; further changes build on it.
+
 > **Why it works — the human's job.** In a dark factory nobody watches the line. Your work moves to the
 > two ends: saying what you want, and judging what you got. Every change you ask for is one more line in
 > the spec, so the checker holds the factory to it from then on.
@@ -96,7 +118,8 @@ In Breakout 2, an agent sends these updates for you.
 After three rounds the factory stops and tells you why. Load the known-good dashboard and carry on:
 
 ```bash
-uv run workshop checkpoint 02-dashboard-built
+uv run workshop checkpoint 02-dashboard-built      # the plain dashboard
+uv run workshop checkpoint 02b-dashboard-extended  # with a colour scheme, an animation and a map
 ```
 
 Then [Breakout 2](03-breakout-2-agent.md).

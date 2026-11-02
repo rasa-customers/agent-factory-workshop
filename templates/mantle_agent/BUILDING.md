@@ -20,7 +20,25 @@ import_tools:
   - mcp/travel:get_meeting
   - mcp/travel:estimate_travel_minutes
   - mcp/travel:update_dashboard
+  # when the brief asks for them:
+  - mcp/travel:find_alternate_flights
+  - mcp/travel:available_meeting_times
+  - mcp/travel:reschedule_meeting
 ```
+
+**One skill per job.** A skill that checks the trip, one that finds an alternate flight, one that moves the
+meeting: each gets its own folder and a `description` that says when it applies. Rules for several skills:
+
+- **What every reply must do goes in `agent.yml` `rules`**, not in one skill: the dashboard link in the first
+  reply, keeping the dashboard in sync, the verdict format, never inventing facts. A rule that lives in one
+  skill is forgotten the moment another skill is active.
+- **Any skill that states a verdict or new facts updates the dashboard**, so it imports `update_dashboard`
+  and `estimate_travel_minutes` along with the tools it needs to look things up.
+- **The trip check answers first.** A new skill (alternate flights, moving the meeting) activates when the
+  traveller asks for it or accepts an offer, never on the first message. The trip-check skill can offer it
+  ("Want me to look for an earlier flight?").
+- Skills share facts through the tools (call `get_flight` again rather than remembering it).
+- When you add a skill, delete `skills/placeholder/` if it is still there.
 
 What each tool does (they already know the traveller — **never ask the user for flight or meeting details**):
 
@@ -29,8 +47,11 @@ What each tool does (they already know the traveller — **never ask the user fo
 | `get_flight` | none needed | the traveller's booked flight: `flight_number`, `airline`, `origin`, `destination`, `status`, `delay_minutes`, `gate`, `previous_gate`, `terminal`, `scheduled_arrival`, `estimated_arrival` (ISO times) |
 | `get_meeting` | none | `title`, `start` (ISO time), `address` |
 | `get_weather` | `location` (e.g. "New York"), `at` (ISO time, e.g. the flight's `estimated_arrival`) | `temperature_c`, `condition`, wind/precipitation |
-| `estimate_travel_minutes` | `origin` (e.g. "JFK"), `destination_address`, `depart_at` (ISO), `mode`: `"car"` or `"subway"` only | `minutes`, `arrives_at` (ISO clock time you'd get there), `note` |
-| `update_dashboard` | `panel`: `flight` \| `weather` \| `meeting` \| `verdict`; `data`: a JSON object | `{ok, dashboard_url}`: the link the traveller opens |
+| `estimate_travel_minutes` | `origin` ("JFK", "LGA" or "EWR"), `destination_address`, `depart_at` (ISO), `mode`: `"car"` or `"subway"` only | `minutes`, `arrives_at` (ISO clock time you'd get there), `note`, `from`/`to` (name, lat, lon) |
+| `find_alternate_flights` | none | `flights`: other flights today with `flight_number`, `airline`, `arrival_airport`, `departs`, `estimated_arrival`, `seats_left` |
+| `available_meeting_times` | none | `slots`: later ISO start times the meeting can move to, and `current_start` |
+| `reschedule_meeting` | `start`: one of the slots | `{ok, meeting}`. Only call it after the traveller says yes to that time. |
+| `update_dashboard` | `panel`: `flight` \| `weather` \| `meeting` \| `verdict` \| `route`; `data`: a JSON object | `{ok, dashboard_url}`: the link the traveller opens |
 
 The dashboard shows whatever keys you put in `data`. Share `dashboard_url` with the traveller as a Markdown link,
 `[Open your dashboard](...)` (the chat turns the first Markdown link in a message into a button). For `verdict` ALWAYS send exactly `{status: yes|tight|no, slack_minutes, reason}` (`reason` = one plain sentence),
@@ -38,7 +59,12 @@ every time, including after a follow-up changes it. Replies to the traveller are
 show raw JSON, tool payloads or panel data in the chat; the dashboard is where data goes.
 
 Tip: leave the airport 15 minutes after `estimated_arrival` (pass that as `depart_at`), then compare
-`arrives_at` with the meeting `start` — no clock arithmetic needed beyond that.
+`arrives_at` with the meeting `start` — no clock arithmetic needed beyond that. The same works for an
+alternate flight (use its `arrival_airport` as `origin`) and for a new meeting slot.
+
+After `estimate_travel_minutes`, send the `route` panel: `{from, to, mode, minutes}` straight from its result
+(the dashboard can draw it on a map). After a reschedule or a chosen alternate, update `meeting` or
+`flight`, `verdict` and `route` so the dashboard matches what you told the traveller.
 
 ## Validate, train, and try it
 Call `train_project` — it validates and trains. Fix every error it reports and call it again until it says OK.

@@ -139,3 +139,59 @@ def test_builder_is_told_to_change_not_rebuild():
 def test_builder_keeps_the_change_in_view_while_fixing():
     text = builder_input("SPEC TEXT", ["verdict too small"], change="Make the verdict twice as big.")
     assert "Make the verdict twice as big." in text and "verdict too small" in text
+
+
+def test_revision_gets_the_latest_cheat_sheet(tmp_path):
+    base = Job(id="m1", kind="mantle_agent", spec="s")
+    root = prepare_workspace(base, base=tmp_path)
+    (root / "BUILDING.md").write_text("an old cheat sheet")
+    rev = Job(id="m2", kind="mantle_agent", spec="s", based_on="m1", change="add a skill")
+    new = prepare_workspace(rev, base=tmp_path)
+    assert "One skill per job" in (new / "BUILDING.md").read_text()
+
+
+async def test_revise_build_picks_the_latest_build_of_the_kind_asked_for(store):
+    dash = await passed_job(store)
+    await passed_job(store, kind="mantle_agent", brief="Cheerful.")
+    server = build_server(store, idle)
+    r = await call_tool(server, "revise_build", {"change": "Add a map.", "kind": "dashboard"})
+    job = store.get(r["job_id"])
+    assert job.kind == "dashboard" and job.based_on == dash.id
+
+
+# --- history, briefs and going back ----------------------------------------------------------------------
+
+async def test_list_builds_newest_first_with_what_changed(store):
+    first = await passed_job(store, brief="Dark dashboard.")
+    second = store.create("dashboard", "x", brief="Dark dashboard.\n- red verdict", based_on=first.id, change="Red verdict.")
+    store.update(second.id, state="failed")
+    server = build_server(store, idle)
+    builds = (await call_tool(server, "list_builds", {}))["builds"]
+    assert [b["job_id"] for b in builds] == [second.id, first.id]
+    assert builds[0]["what"] == "Red verdict." and builds[0]["state"] == "failed"
+    assert builds[1]["what"].startswith("Dark dashboard.") and builds[1]["result_url"]
+
+
+async def test_get_brief_returns_the_latest_brief_of_a_kind(store):
+    await passed_job(store, brief="Dark dashboard.")
+    await passed_job(store, kind="mantle_agent", brief="Cheerful agent.")
+    server = build_server(store, idle)
+    r = await call_tool(server, "get_brief", {"kind": "dashboard"})
+    assert r["brief"] == "Dark dashboard." and r["kind"] == "dashboard"
+
+
+async def test_restore_build_starts_a_restore_job_for_a_passed_build(store):
+    old = await passed_job(store, brief="Dark dashboard.")
+    server = build_server(store, idle)
+    r = await call_tool(server, "restore_build", {"job_id": old.id})
+    job = store.get(r["job_id"])
+    assert job.restore is True and job.based_on == old.id and job.kind == "dashboard"
+    assert job.brief == old.brief and r["activity_url"].endswith(job.id)
+
+
+async def test_restore_build_refuses_a_build_that_did_not_pass(store):
+    bad = store.create("dashboard", "x", brief="x")
+    store.update(bad.id, state="failed")
+    server = build_server(store, idle)
+    r = await call_tool(server, "restore_build", {"job_id": bad.id})
+    assert "error" in r

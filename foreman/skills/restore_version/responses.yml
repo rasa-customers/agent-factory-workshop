@@ -1,0 +1,5 @@
+responses:
+  utter_restore_links:
+    - text: "Here are the links."
+      buttons:
+        source: restore_links

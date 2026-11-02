@@ -16,7 +16,7 @@ DEPLANE_MINUTES = 15
 async def example_panels() -> dict[str, dict]:
     flight, meeting = flight_data.flight(), flight_data.meeting()
     weather = await get_weather("New York", flight["estimated_arrival"])
-    car_minutes, _ = flight_data.TRAVEL_MINUTES["car"]
+    car_minutes, _ = flight_data.TRAVEL[("JFK", "car")]
     arrive = (datetime.fromisoformat(flight["estimated_arrival"])
               + timedelta(minutes=DEPLANE_MINUTES + car_minutes))
     slack = int((datetime.fromisoformat(meeting["start"]) - arrive).total_seconds() // 60)
@@ -28,6 +28,8 @@ async def example_panels() -> dict[str, dict]:
         "weather": {**weather, "note": NOTE},
         "meeting": {**meeting, "note": NOTE},
         "verdict": {"status": status, "slack_minutes": slack, "reason": reason, "note": NOTE},
+        "route": {"from": flight_data.AIRPORTS["JFK"], "to": flight_data.MEETING_LOCATION, "mode": "car",
+                  "minutes": car_minutes, "note": NOTE},
     }
 
 

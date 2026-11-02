@@ -1,8 +1,10 @@
 """Dashboard server — the fixed contract. The factory builds the UI in static/.
 
 Contract:
-  POST /api/state   {"panel": "flight"|"weather"|"meeting"|"verdict", "data": {...}}  → merges, returns full state
-  GET  /api/state   → {"flight": {...}|null, "weather": ..., "meeting": ..., "verdict": ...}
+  POST /api/state   {"panel": "flight"|"weather"|"meeting"|"verdict"|"route", "data": {...}}  → merges, returns full state
+  GET  /api/state   → {"flight": {...}|null, "weather": ..., "meeting": ..., "verdict": ..., "route": ...}
+
+  `route` is data for an optional map: {"from": {name, lat, lon}, "to": {name, lat, lon}, "mode", "minutes"}.
   GET  /api/events  → Server-Sent Events; a `state` event with the full state on connect and after every change
   POST /api/reset   → clears state
   GET  /            → static/index.html
@@ -20,12 +22,12 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-PANELS = ("flight", "weather", "meeting", "verdict")
+PANELS = ("flight", "weather", "meeting", "verdict", "route")
 STATIC = Path(__file__).parent / "static"
 
 
 class Update(BaseModel):
-    panel: Literal["flight", "weather", "meeting", "verdict"]
+    panel: Literal["flight", "weather", "meeting", "verdict", "route"]
     data: dict[str, Any]
 
 

@@ -39,3 +39,13 @@ def test_watch_reports_failure_when_a_service_dies():
     from workshop.procs import watch
     dead = subprocess.Popen([sys.executable, "-c", "pass"]); dead.wait()
     assert watch([dead]) == 1
+
+
+def test_extended_checkpoints_exist_in_the_repo():
+    from workshop.procs import CHECKPOINTS, REPO
+    for name in ("02b-dashboard-extended", "03b-agent-extended"):
+        kind, sub, _ = CHECKPOINTS[name]
+        root = REPO / "checkpoints" / name / sub
+        assert (root / ("static/index.html" if kind == "dashboard" else "agent.yml")).exists()
+    skills = {p.name for p in (REPO / "checkpoints" / "03b-agent-extended" / "travel-agent" / "skills").iterdir()}
+    assert len(skills) >= 3 and "placeholder" not in skills

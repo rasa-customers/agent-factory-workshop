@@ -1,0 +1,246 @@
+:root{
+  /* Catppuccin Mocha palette */
+  --crust: #11111b;
+  --mantle:#181825;
+  --base:  #1e1e2e;
+
+  --text:   #cdd6f4;
+  --subtext:#a6adc8;
+  --overlay:#6c7086;
+  --surface0:#313244;
+  --surface1:#45475a;
+
+  /* Accents (Catppuccin) */
+  --green:#a6e3a1;
+  --yellow:#f9e2af;
+  --red:#f38ba8;
+  --blue:#89b4fa;
+  --mauve:#cba6f7;
+  --teal:#94e2d5;
+
+  /* App semantic tokens */
+  --bg: var(--base);
+  --panel: var(--mantle);
+  --panel2: var(--crust);
+  --textColor: var(--text);
+  --muted: var(--subtext);
+  --faint: var(--overlay);
+  --border: color-mix(in srgb, var(--surface0) 70%, transparent);
+  --shadow: 0 20px 60px rgba(0,0,0,.55);
+
+  --yes: var(--green);
+  --tight: var(--yellow);
+  --no: var(--red);
+
+  --radius:18px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  background:
+    radial-gradient(1200px 600px at 18% -10%, color-mix(in srgb, var(--mauve) 28%, transparent), transparent 60%),
+    radial-gradient(900px 520px at 96% 0%, color-mix(in srgb, var(--teal) 18%, transparent), transparent 55%),
+    radial-gradient(980px 700px at 32% 112%, color-mix(in srgb, var(--yellow) 14%, transparent), transparent 58%),
+    var(--bg);
+  color:var(--textColor);
+}
+
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:10;
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+  padding:18px 22px;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--crust) 88%, transparent), color-mix(in srgb, var(--crust) 70%, transparent));
+  backdrop-filter: blur(10px);
+  border-bottom:1px solid var(--border);
+}
+.brand__title{font-weight:800; letter-spacing:.4px; font-size:20px; line-height:1.1}
+.brand__subtitle{font-size:12px; color:var(--muted); margin-top:4px}
+
+.actions{display:flex; align-items:center; gap:10px}
+
+.btn{
+  appearance:none;
+  border:1px solid var(--border);
+  background: color-mix(in srgb, var(--surface0) 30%, transparent);
+  color:var(--textColor);
+  padding:10px 12px;
+  border-radius:12px;
+  font-weight:650;
+  cursor:pointer;
+}
+.btn:hover{background: color-mix(in srgb, var(--surface0) 45%, transparent)}
+.btn:active{transform: translateY(1px)}
+.btn--ghost{font-size:12px; padding:8px 10px; opacity:.92}
+
+.layout{
+  padding:18px 18px 34px;
+  display:grid;
+  grid-template-columns: 1.2fr .8fr;
+  gap:18px;
+  align-items:start;
+}
+
+.panel{
+  background: linear-gradient(180deg, color-mix(in srgb, var(--mantle) 92%, white 8%), color-mix(in srgb, var(--mantle) 96%, transparent));
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow:visible;
+}
+.panel__header{
+  padding:16px 18px 10px;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+}
+.panel__header h2{
+  margin:0;
+  font-size:16px;
+  letter-spacing:.4px;
+  text-transform:uppercase;
+  color: color-mix(in srgb, var(--text) 92%, white 8%);
+}
+.panel__hint{font-size:12px; color:var(--faint)}
+.panel__body{padding:12px 18px 18px}
+
+.panel--verdict{ grid-column:1 / -1; }
+
+.verdictHero{
+  border-radius: calc(var(--radius) - 4px);
+  border:1px solid color-mix(in srgb, var(--surface0) 80%, transparent);
+  padding:22px 20px;
+  background:
+    radial-gradient(900px 260px at 12% 0%, color-mix(in srgb, var(--surface1) 28%, transparent), transparent 62%),
+    color-mix(in srgb, var(--crust) 55%, transparent);
+  transform-origin: 18% 25%;
+}
+.verdictHero__status{
+  font-weight:900;
+  letter-spacing:1px;
+  font-size: clamp(56px, 6.4vw, 110px);
+  line-height: .95;
+}
+.verdictHero__sub{
+  margin-top:10px;
+  font-size: clamp(18px, 2vw, 28px);
+  color: color-mix(in srgb, var(--text) 88%, transparent);
+}
+.verdictHero__reason{
+  margin-top:10px;
+  font-size: clamp(14px, 1.4vw, 18px);
+  color: var(--muted);
+}
+
+.verdictHero.is-yes{border-color: color-mix(in srgb, var(--yes) 55%, transparent)}
+.verdictHero.is-tight{border-color: color-mix(in srgb, var(--tight) 62%, transparent)}
+.verdictHero.is-no{border-color: color-mix(in srgb, var(--no) 62%, transparent)}
+.verdictHero.is-waiting{border-color: color-mix(in srgb, var(--surface0) 65%, transparent)}
+
+.verdictHero.is-yes .verdictHero__status{color: var(--yes)}
+.verdictHero.is-tight .verdictHero__status{color: var(--tight)}
+.verdictHero.is-no .verdictHero__status{color: var(--no)}
+.verdictHero.is-waiting .verdictHero__status{color: color-mix(in srgb, var(--text) 65%, transparent)}
+
+/* Verdict update animation */
+.verdictHero{
+  transition: transform 340ms ease, box-shadow 340ms ease, border-color 340ms ease, background-color 340ms ease;
+}
+.verdictHero.is-updated{
+  transform: scale(1.015);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, currentColor 22%, transparent),
+    0 10px 40px color-mix(in srgb, currentColor 16%, transparent),
+    var(--shadow);
+}
+.verdictHero.is-yes.is-updated{ box-shadow:
+  0 0 0 2px color-mix(in srgb, var(--yes) 40%, transparent),
+  0 10px 40px color-mix(in srgb, var(--yes) 20%, transparent),
+  var(--shadow);
+}
+.verdictHero.is-tight.is-updated{ box-shadow:
+  0 0 0 2px color-mix(in srgb, var(--tight) 42%, transparent),
+  0 10px 40px color-mix(in srgb, var(--tight) 22%, transparent),
+  var(--shadow);
+}
+.verdictHero.is-no.is-updated{ box-shadow:
+  0 0 0 2px color-mix(in srgb, var(--no) 42%, transparent),
+  0 10px 40px color-mix(in srgb, var(--no) 22%, transparent),
+  var(--shadow);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .verdictHero{ transition:none; }
+  .verdictHero.is-updated{ transform:none; }
+}
+
+.flightTop, .weatherTop, .meetingTop{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom: 10px;
+}
+.flightTop__main{font-size:26px; font-weight:800; letter-spacing:.3px}
+.flightTop__status{font-size:16px; color: var(--muted); font-weight:700}
+
+.weatherTop__temp{font-size:40px; font-weight:900}
+.weatherTop__cond{font-size:18px; color: var(--muted); font-weight:700}
+
+.meetingTop__title{font-size:22px; font-weight:850}
+.meetingTop__time{font-size:16px; color: color-mix(in srgb, var(--text) 88%, transparent); font-weight:750}
+.meetingTop__addr{font-size:14px; color: var(--muted); margin-top:6px}
+.meetingTop{flex-direction:column; align-items:flex-start}
+
+.kv{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:8px;
+  margin-top: 10px;
+}
+.kvRow{
+  display:grid;
+  grid-template-columns: 180px 1fr;
+  gap:12px;
+  padding:10px 12px;
+  border:1px solid color-mix(in srgb, var(--surface0) 65%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--crust) 55%, transparent);
+}
+.kvRow__k{color: var(--faint); text-transform:uppercase; letter-spacing:.6px; font-weight:800; font-size:12px}
+.kvRow__v{color: color-mix(in srgb, var(--text) 96%, white 4%); font-weight:700; font-size:16px; overflow-wrap:anywhere}
+
+/* Map panel */
+.map{
+  width:100%;
+  height: 320px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--surface0) 65%, transparent);
+  background: color-mix(in srgb, var(--crust) 65%, transparent);
+  overflow:hidden;
+}
+.panel--map .panel__body{display:flex; flex-direction:column; gap:10px}
+
+/* Leaflet dark-ish tweaks (keep tiles as-is) */
+.leaflet-container{background: var(--crust); color: var(--text)}
+.leaflet-control-attribution{background: color-mix(in srgb, var(--crust) 78%, transparent) !important; color: var(--subtext) !important; border: 1px solid var(--border)}
+.leaflet-control-zoom a{background: color-mix(in srgb, var(--crust) 82%, transparent) !important; color: var(--text) !important; border-color: var(--border) !important}
+
+@media (max-width: 980px){
+  .layout{grid-template-columns: 1fr}
+  .panel--verdict{grid-column:auto}
+  .kvRow{grid-template-columns: 140px 1fr}
+  .map{height: 280px}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto}
+}

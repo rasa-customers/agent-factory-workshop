@@ -37,6 +37,7 @@ class Job:
     based_on: str | None = None    # a revision starts from this earlier job's finished build
     change: str | None = None      # what the revision changes
     created: float = 0.0
+    restore: bool = False          # put an earlier passed build back live; no building or checking
 
 
 class JobStore:
@@ -60,9 +61,9 @@ class JobStore:
         (self.root / f"{job.id}.json").write_text(json.dumps(asdict(job), indent=1))
 
     def create(self, kind: Kind, spec: str, *, brief: str = "", based_on: str | None = None,
-               change: str | None = None) -> Job:
+               change: str | None = None, restore: bool = False) -> Job:
         job = Job(id=uuid.uuid4().hex[:8], kind=kind, spec=spec, brief=brief or spec, based_on=based_on,
-                  change=change, created=time.time())
+                  change=change, created=time.time(), restore=restore)
         self._jobs[job.id] = job
         self._save(job)
         return job
@@ -70,9 +71,14 @@ class JobStore:
     def get(self, job_id: str) -> Job | None:
         return self._jobs.get(job_id)
 
-    def latest(self, state: str | None = None) -> Job | None:
-        """The most recently created job, optionally only among jobs in one state."""
-        jobs = [j for j in self._jobs.values() if state is None or j.state == state]
+    def all(self) -> list[Job]:
+        """Every job, newest first."""
+        return sorted(self._jobs.values(), key=lambda j: j.created, reverse=True)
+
+    def latest(self, state: str | None = None, kind: str | None = None) -> Job | None:
+        """The most recently created job, optionally only among jobs in one state and of one kind."""
+        jobs = [j for j in self._jobs.values()
+                if (state is None or j.state == state) and (kind is None or j.kind == kind)]
         return max(jobs, key=lambda j: j.created, default=None)
 
     def add_event(self, job_id: str, actor: str, text: str) -> None:

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NY Trip Team-Room Dashboard</title>
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- Map (Leaflet) allowed exception per README when map requested -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__title">NY Trip Dashboard</div>
+      <div class="brand__subtitle" id="connectionStatus">Connecting…</div>
+    </div>
+
+    <div class="actions">
+      <button id="clearBtn" class="btn btn--ghost" type="button" title="Clear dashboard">Clear</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel panel--verdict" aria-label="Will you make it?">
+      <div class="panel__header">
+        <h2>Will you make it?</h2>
+      </div>
+      <div class="panel__body">
+        <div id="verdictHero" class="verdictHero is-waiting">
+          <div class="verdictHero__status" id="verdictStatus">WAITING</div>
+          <div class="verdictHero__sub" id="verdictSlack">Waiting for a verdict…</div>
+          <div class="verdictHero__reason" id="verdictReason">—</div>
+        </div>
+        <div class="kv" id="verdictKV" aria-label="Verdict details"></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Flight">
+      <div class="panel__header">
+        <h2>Flight</h2>
+        <div class="panel__hint" id="flightHint">Waiting for flight details…</div>
+      </div>
+      <div class="panel__body">
+        <div class="flightTop" id="flightTop">
+          <div class="flightTop__main" id="flightMain">—</div>
+          <div class="flightTop__status" id="flightStatus">—</div>
+        </div>
+        <div class="kv" id="flightKV" aria-label="Flight details"></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Weather when you land">
+      <div class="panel__header">
+        <h2>Weather when you land</h2>
+        <div class="panel__hint" id="weatherHint">Waiting for weather…</div>
+      </div>
+      <div class="panel__body">
+        <div class="weatherTop" id="weatherTop">
+          <div class="weatherTop__temp" id="weatherTemp">—</div>
+          <div class="weatherTop__cond" id="weatherCond">—</div>
+        </div>
+        <div class="kv" id="weatherKV" aria-label="Weather details"></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Your meeting">
+      <div class="panel__header">
+        <h2>Your meeting</h2>
+        <div class="panel__hint" id="meetingHint">Waiting for meeting details…</div>
+      </div>
+      <div class="panel__body">
+        <div class="meetingTop" id="meetingTop">
+          <div class="meetingTop__title" id="meetingTitle">—</div>
+          <div class="meetingTop__time" id="meetingTime">—</div>
+          <div class="meetingTop__addr" id="meetingAddr">—</div>
+        </div>
+        <div class="kv" id="meetingKV" aria-label="Meeting details"></div>
+      </div>
+    </section>
+
+    <section class="panel panel--map" aria-label="Route map">
+      <div class="panel__header">
+        <h2>Route</h2>
+        <div class="panel__hint" id="routeHint">Waiting for route…</div>
+      </div>
+      <div class="panel__body">
+        <div id="map" class="map" role="img" aria-label="Map showing route"></div>
+        <div class="kv" id="routeKV" aria-label="Route details"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

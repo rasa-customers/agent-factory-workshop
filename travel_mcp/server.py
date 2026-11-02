@@ -1,6 +1,8 @@
 """Travel tools for the workshop, served over MCP on :8700.
 
-Mock flight + meeting, real weather, and a bridge that pushes facts onto the dashboard.
+Mock flight, alternates and meeting, real weather, and a bridge that pushes facts onto the dashboard.
+POST /reset (plain HTTP, not a tool) puts the trip back the way it started; the factory calls it before
+every check so one conversation's reschedule can't leak into the next.
 """
 from __future__ import annotations
 
@@ -11,6 +13,8 @@ from typing import Any, Literal
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from travel_mcp import flight_data, weather
 
@@ -41,19 +45,42 @@ async def get_meeting() -> dict:
 @mcp.tool()
 async def estimate_travel_minutes(origin: str, destination_address: str, depart_at: str,
                                   mode: Literal["car", "subway"] = "car") -> dict:
-    """Estimate door-to-door travel time from an airport to an address, by car or subway.
+    """Estimate door-to-door travel time from an airport (JFK, LGA or EWR) to an address, by car or subway.
     Returns the minutes and `arrives_at`: the clock time you'd arrive if you leave at depart_at."""
-    minutes, note = flight_data.TRAVEL_MINUTES[mode]
+    code = flight_data.airport(origin)
+    minutes, note = flight_data.TRAVEL[(code, mode)]
     try:
         arrives_at = (datetime.fromisoformat(depart_at) + timedelta(minutes=minutes)).isoformat()
     except ValueError:
         arrives_at = None
-    return {"minutes": minutes, "mode": mode, "arrives_at": arrives_at, "note": note}
+    return {"minutes": minutes, "mode": mode, "origin": code, "arrives_at": arrives_at, "note": note,
+            "from": flight_data.AIRPORTS[code], "to": flight_data.MEETING_LOCATION}
 
 
 @mcp.tool()
-async def update_dashboard(panel: Literal["flight", "weather", "meeting", "verdict"], data: dict) -> dict:
-    """Show information on the traveller's dashboard. Panels: flight, weather, meeting, verdict.
+async def find_alternate_flights() -> dict:
+    """Other flights from Chicago to New York today that still have seats, with where and when they land.
+    Use estimate_travel_minutes from each one's arrival_airport to compare them."""
+    return {"flights": flight_data.alternate_flights()}
+
+
+@mcp.tool()
+async def available_meeting_times() -> dict:
+    """Later start times the meeting could move to today (ISO times)."""
+    return {"slots": flight_data.meeting_slots(), "current_start": flight_data.meeting()["start"]}
+
+
+@mcp.tool()
+async def reschedule_meeting(start: str) -> dict:
+    """Move the meeting to one of the slots from available_meeting_times. Only do this when the traveller
+    has said yes to that time. Returns the updated meeting."""
+    return flight_data.reschedule(start)
+
+
+@mcp.tool()
+async def update_dashboard(panel: Literal["flight", "weather", "meeting", "verdict", "route"], data: dict) -> dict:
+    """Show information on the traveller's dashboard. Panels: flight, weather, meeting, verdict, and route
+    (the trip from the airport to the meeting: `from` and `to` with lat/lon, `mode`, `minutes`).
     Returns `dashboard_url`: the link the traveller opens to see it."""
     entry: dict[str, Any] = {"ts": time.time(), "panel": panel, "data": data, "ok": False}
     try:
@@ -73,6 +100,12 @@ async def update_dashboard(panel: Literal["flight", "weather", "meeting", "verdi
 async def get_dashboard_history() -> list[dict]:
     """Every dashboard update sent since this server started (used by the factory's checker)."""
     return DASHBOARD_HISTORY
+
+
+@mcp.custom_route("/reset", methods=["POST"])
+async def reset(request: Request) -> JSONResponse:
+    flight_data.reset()
+    return JSONResponse({"ok": True})
 
 
 def main() -> None:

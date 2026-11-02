@@ -1,6 +1,8 @@
 """Checking a built Mantle agent: talk to it through rasa-tools, and confirm the dashboard moved."""
 from __future__ import annotations
 
+import httpx
+
 import json
 import os
 import subprocess
@@ -50,7 +52,15 @@ def train_project_tool(root: Path) -> FunctionTool:
     return _train
 
 
-TRUTH_TOOLS = ["get_flight", "get_meeting", "get_weather", "estimate_travel_minutes"]
+TRUTH_TOOLS = ["get_flight", "get_meeting", "get_weather", "estimate_travel_minutes", "find_alternate_flights",
+               "available_meeting_times"]
+
+
+async def reset_trip(url: str = TRAVEL_MCP_URL) -> None:
+    """Put the trip back (meeting time and all) so one check's reschedule can't leak into the next."""
+    base = url.rsplit("/mcp", 1)[0]
+    async with httpx.AsyncClient(timeout=5) as client:
+        (await client.post(f"{base}/reset")).raise_for_status()
 
 
 def travel_truth_server(url: str = TRAVEL_MCP_URL) -> MCPServerStreamableHttp:

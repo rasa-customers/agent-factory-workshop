@@ -48,6 +48,13 @@ def dash_flash(tmp_path):
 
 
 @pytest.fixture
+def dash_anim(tmp_path):
+    url, root, server = _serve(tmp_path, "dash_anim")
+    yield url, root
+    server.should_exit = True
+
+
+@pytest.fixture
 def dash_err(tmp_path):
     url, root, server = _serve(tmp_path, "dash_err")
     yield url, root
@@ -91,6 +98,24 @@ async def test_probe_reports_no_highlight_when_there_is_none(dash_ok):
     assert r["look"]["highlighted_briefly"] == []
 
 
+async def test_probe_sees_a_short_animation_after_an_update(dash_anim):
+    url, root = dash_anim
+    r = await probe(url, [{"panel": "flight", "data": {"gate": "B22"}}], shots_dir=root)
+    assert any("Gate B22" in a["text"] for a in r["look"]["animated"])
+
+
+async def test_probe_reports_no_animation_when_there_is_none(dash_ok):
+    url, root = dash_ok
+    r = await probe(url, [{"panel": "flight", "data": {"gate": "B22"}}], shots_dir=root)
+    assert r["look"]["animated"] == []
+
+
+async def test_probe_reports_whether_there_is_a_map(dash_ok):
+    url, root = dash_ok
+    r = await probe(url, [], shots_dir=root)
+    assert r["look"]["map"] == {"present": False, "tiles_loaded": 0, "markers": 0, "lines": 0}
+
+
 async def test_probe_can_look_at_phone_width(dash_ok):
     url, root = dash_ok
     r = await probe(url, [], shots_dir=root, viewport="phone")
@@ -120,5 +145,6 @@ async def test_travel_truth_server_is_read_only():
     from factory.checks.mantle import TRUTH_TOOLS, travel_truth_server
     srv = travel_truth_server()
     assert srv.params["url"].endswith("/mcp/")
-    assert set(TRUTH_TOOLS) == {"get_flight", "get_meeting", "get_weather", "estimate_travel_minutes"}
+    assert set(TRUTH_TOOLS) == {"get_flight", "get_meeting", "get_weather", "estimate_travel_minutes",
+                                "find_alternate_flights", "available_meeting_times"}
     assert "update_dashboard" not in TRUTH_TOOLS

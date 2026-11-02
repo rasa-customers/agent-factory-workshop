@@ -55,21 +55,36 @@ Watch the panels fill in as it answers. Then try:
 
 In the Inspector you can see which skill ran, which tools it called, and what it remembered.
 
-## Change it
+## Make it more useful
 
-Tell the foreman what you'd change, just as with the dashboard:
+An agent with one skill only reports. Give it skills that *do* something, one change at a time:
 
-> Start every reply with a status emoji: green for yes, yellow for tight, red for no.
+> Add a skill to my agent: if I'm going to be tight or late, offer to find me an alternate flight that
+> gets me there with time to spare.
 
-> It never tells me what to do. End each reply with one suggestion.
+> Add another skill: offer to move my meeting to a later slot so I have at least 15 minutes to spare,
+> and move it if I say yes.
 
-The builder edits the agent it already made, trains it again, and the checker holds a fresh
-conversation to check the change and everything else.
+Each one becomes its own Mantle skill, with its own description of when it applies and its own tools
+(`find_alternate_flights`, `available_meeting_times`, `reschedule_meeting`). The checker holds a fresh
+conversation each time and checks the new skill against the real options, so it catches an agent that
+recommends a flight that would still be late.
+
+Then try it:
+
+1. "I'm flying to New York… will I make my meeting?" (tight: 5 minutes)
+2. "Can you find me an earlier flight?" (one lands at LaGuardia with 45 minutes to spare)
+3. "Could we move my meeting instead?" and pick a time. Watch the meeting and verdict panels change.
+
+The trip resets each time the factory checks a build, so a moved meeting doesn't stick around.
+
+Smaller changes work too: its tone, emoji status markers, ending every reply with one suggestion.
 
 ## If it doesn't pass
 
 ```bash
-uv run workshop checkpoint 03-agent-built
+uv run workshop checkpoint 03-agent-built      # the trip check
+uv run workshop checkpoint 03b-agent-extended  # plus alternate flights and moving the meeting
 ```
 
 This starts the known-good travel agent and prints its link.

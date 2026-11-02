@@ -13,7 +13,8 @@ from agents import RunContextWrapper, RunHooks, Runner
 from factory.agents import CheckReport, make_builder, make_checker
 from factory.checks.dashboard import probe_dashboard_tool
 from factory.example_data import seed_dashboard
-from factory.checks.mantle import dashboard_history_tool, rasa_tools_server, train_project_tool, travel_truth_server
+from factory.checks.mantle import (dashboard_history_tool, rasa_tools_server, reset_trip, train_project_tool,
+                                   travel_truth_server)
 from factory.hosting import ArtifactHost, StartFailed
 from factory.jobs import Job, JobStore
 from factory.workspace import WORKSPACE, WorkspaceTools, prepare_workspace
@@ -52,7 +53,8 @@ class RealWorkers:
                 def checker_for(url: str):
                     return make_checker("mantle_agent", tools=[dashboard_history_tool(time.time())],
                                         mcp_servers=[check_tools, truth])
-            yield SimpleNamespace(builder=builder, checker_for=checker_for)
+            yield SimpleNamespace(builder=builder, checker_for=checker_for,
+                                  before_check=reset_trip if job.kind == "mantle_agent" else None)
 
 
 def explain(e: Exception) -> str:
@@ -85,6 +87,15 @@ async def run_job(job: Job, store: JobStore, *, run_agent=Runner.run, host=None,
     say = lambda actor, text: store.add_event(job.id, actor, text)  # noqa: E731
     try:
         root = prepare_workspace(job, base=workspace_base)
+        if job.restore:
+            say("factory", f"Putting build {job.based_on} back live.")
+            url = await host.start(job.kind, root)
+            await host.promote(job.kind, root)
+            if job.kind == "dashboard" and await (seed or seed_dashboard)("http://localhost:8600"):
+                say("factory", "Filled the dashboard with the workshop's example trip.")
+            store.update(job.id, state="passed", result_url=url, summary=f"Build {job.based_on} is live again.")
+            say("factory", f"Done. Build {job.based_on} is live again: {url}")
+            return
         if job.change:
             say("factory", f"Starting from build {job.based_on} and changing: {job.change}")
         say("factory", f"Workspace ready. Up to {max_rounds} build rounds.")
@@ -106,6 +117,8 @@ async def run_job(job: Job, store: JobStore, *, run_agent=Runner.run, host=None,
                     say("factory", f"Couldn't start it — sending the errors back to the builder. {e}"[:600])
                     failures = [str(e)]
                     continue
+                if getattr(crew, "before_check", None):
+                    await crew.before_check()
                 say("checker", "Checking the result against the spec (without looking at the code).")
                 checked = await run_agent(crew.checker_for(url), f"SPEC:\n{job.spec}",
                                           hooks=ActivityHooks(store, job.id, "checker"), max_turns=MAX_TURNS)

@@ -35,7 +35,12 @@ LOOK_JS = """() => {
   return {page_background: back,
           body_text_color: getComputedStyle(document.body).color,
           largest_text: texts.slice(0, 8),
-          horizontal_overflow: document.documentElement.scrollWidth > window.innerWidth + 1};
+          horizontal_overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+          map: {present: !!document.querySelector('.leaflet-container'),
+                tiles_loaded: document.querySelectorAll('img.leaflet-tile-loaded').length,
+                markers: document.querySelectorAll('.leaflet-marker-icon').length
+                         + document.querySelectorAll('.leaflet-overlay-pane path.leaflet-interactive[d*="a"]').length,
+                lines: [...document.querySelectorAll('.leaflet-overlay-pane path')].filter(e => !/a/i.test(e.getAttribute('d') || '')).length}};
 }"""
 
 
@@ -49,6 +54,22 @@ STYLE_JS = """() => [...document.body.querySelectorAll('*')].map((el, i) => {
           [el.className, cs.animationName, cs.backgroundColor, cs.boxShadow, cs.outlineStyle, cs.outlineColor,
            cs.borderColor, cs.color, cs.transform, cs.opacity].join('|')];
 })"""
+
+
+# Started just before the updates: records every CSS/Web animation or transition that runs in the next 2 s.
+WATCH_ANIMATIONS_JS = """() => {
+  window.__animSeen = []; const seen = new Set(); const t0 = performance.now();
+  const id = setInterval(() => {
+    for (const a of document.getAnimations()) {
+      const el = a.effect && a.effect.target; if (!el) continue;
+      const what = a.animationName || a.transitionProperty || 'animation';
+      const text = (el.innerText || el.textContent || '').trim().slice(0, 60);
+      const key = what + '|' + text; if (seen.has(key)) continue; seen.add(key);
+      window.__animSeen.push({text: text, what: what});
+    }
+    if (performance.now() - t0 > 2000) clearInterval(id);
+  }, 40);
+}"""
 
 
 def briefly_changed(soon: list, later: list, limit: int = 8) -> list[dict]:
@@ -83,6 +104,7 @@ async def _probe(base: str, updates: list[dict], shots_dir: Path, viewport: str)
         await page.goto(base + "/", wait_until="networkidle")
         await page.wait_for_timeout(500)
         before = await page.inner_text("body")
+        await page.evaluate(WATCH_ANIMATIONS_JS)
         async with httpx.AsyncClient(timeout=5) as client:
             for u in updates:
                 await client.post(f"{base}/api/state", json=u)
@@ -93,6 +115,7 @@ async def _probe(base: str, updates: list[dict], shots_dir: Path, viewport: str)
         after = await page.inner_text("body")
         look = await page.evaluate(LOOK_JS)
         look["highlighted_briefly"] = briefly_changed(soon, later) if updates else []
+        look["animated"] = (await page.evaluate("window.__animSeen || []"))[:8] if updates else []
         look["viewport"] = f"{viewport if viewport in VIEWPORTS else 'tablet'} {width}x{height}"
         shot = Path(shots_dir) / f"check-{time.time_ns()}.png"
         await page.screenshot(path=str(shot), full_page=True)
@@ -110,8 +133,10 @@ def probe_dashboard_tool(base_url: str, shots_dir: Path) -> FunctionTool:
         viewport: "tablet" (1180x820, the default), "phone" (390x844) or "projector" (1920x1080).
         Returns page text before and after the updates, any console errors, and `look` after the updates:
         page background and text colours, the largest text on the page (text, font size, weight, colour),
-        whether the page overflows sideways, and `highlighted_briefly`: elements that looked different just
-        after the update than a few seconds later (a highlight on change)."""
+        whether the page overflows sideways, `highlighted_briefly`: elements that looked different just
+        after the update than a few seconds later (a highlight on change), `animated`: elements that ran a CSS
+        animation or transition in the 2 s after the update (with which property), and `map`: whether a map is on
+        the page, how many map tiles loaded, and how many markers and lines are drawn on it."""
         try:
             updates = json.loads(updates_json)
         except json.JSONDecodeError as e:

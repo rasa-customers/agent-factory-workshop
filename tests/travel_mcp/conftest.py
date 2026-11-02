@@ -19,4 +19,6 @@ def call():
     from travel_mcp import weather
     server.DASHBOARD_HISTORY.clear()
     weather.FORECASTS.clear()
+    from travel_mcp import flight_data
+    flight_data.reset()
     return _call

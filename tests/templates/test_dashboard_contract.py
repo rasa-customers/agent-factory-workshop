@@ -55,3 +55,15 @@ async def test_events_stream_emits_after_post(client):
 def test_index_served(client):
     c, _ = client
     assert "factory" in c.get("/").text.lower()
+
+
+def test_route_panel_for_a_map(client):
+    c, _ = client
+    assert c.get("/api/state").json()["route"] is None
+    r = c.post("/api/state", json={"panel": "route", "data": {"mode": "car", "minutes": 55}})
+    assert r.status_code == 200 and c.get("/api/state").json()["route"]["minutes"] == 55
+
+
+def test_checkpoint_dashboard_runs_the_same_server():
+    checkpoint = Path(__file__).parents[2] / "checkpoints" / "02-dashboard-built" / "dashboard" / "app.py"
+    assert checkpoint.read_text() == APP.read_text()

@@ -152,3 +152,41 @@ async def test_a_revision_builds_on_the_previous_workspace(store, tmp_path):
     assert "Bigger verdict." in calls["builder_inputs"][0] and "already" in calls["builder_inputs"][0]
     assert (tmp_path / "ws" / rev.id / "static" / "index.html").read_text() == "<h1>first build</h1>"
     assert any("changing: Bigger verdict." in e.text for e in j.events)
+
+
+async def test_the_trip_is_reset_before_every_check(store, tmp_path):
+    resets = []
+
+    class Workers(FakeWorkers):
+        @asynccontextmanager
+        async def session(self, job, root):
+            async def before_check():
+                resets.append(job.round if store.get(job.id) else None)
+            yield SimpleNamespace(builder=SimpleNamespace(name="Builder"),
+                                  checker_for=lambda url: SimpleNamespace(name="Checker"), before_check=before_check)
+
+    job = store.create("mantle_agent", "An agent.")
+    run_agent, _ = scripted(report(False), report(True))
+    await run_job(job, store, run_agent=run_agent, host=FakeHost(), workers=Workers(), max_rounds=3,
+                  workspace_base=tmp_path / "ws")
+    assert len(resets) == 2
+
+
+def test_checker_can_look_up_alternates_and_meeting_slots():
+    from factory.checks.mantle import TRUTH_TOOLS
+    assert {"find_alternate_flights", "available_meeting_times"} <= set(TRUTH_TOOLS)
+    assert "reschedule_meeting" not in TRUTH_TOOLS and "update_dashboard" not in TRUTH_TOOLS
+
+
+async def test_a_restore_puts_an_old_build_live_without_building_or_checking(store, tmp_path):
+    old = store.create("dashboard", "A dashboard.")
+    run_agent, _ = scripted(report(True))
+    await go(old, store, run_agent, tmp_path)
+    (tmp_path / "ws" / old.id / "static" / "index.html").write_text("<h1>old one</h1>")
+    restore = store.create("dashboard", "A dashboard.", based_on=old.id, change=f"Go back to build {old.id}.",
+                           restore=True)
+    run_agent, calls = scripted()
+    j, host = await go(restore, store, run_agent, tmp_path)
+    assert j.state == "passed" and calls["builder_inputs"] == []
+    assert host.promoted[0] == "dashboard"
+    assert (tmp_path / "ws" / restore.id / "static" / "index.html").read_text() == "<h1>old one</h1>"

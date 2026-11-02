@@ -40,7 +40,8 @@ BUILDER = {
 
 The workspace already contains app.py — a fixed server contract (read README.md and app.py's docstring first).
 Do NOT modify app.py. Write the user interface only under static/: index.html plus any .css/.js files.
-Plain HTML, CSS and JavaScript. No build step, no frameworks, no CDN or network imports.
+Plain HTML, CSS and JavaScript. No build step, no frameworks, no CDN or network imports, with one
+exception: when the spec asks for a map, use Leaflet and OpenStreetMap tiles exactly as README.md describes.
 The page must load GET /api/state on start and stay live with EventSource('/api/events') (event name `state`,
 data = full state JSON). Every panel needs a sensible empty state before data arrives.
 Use relative URLs only (the page may be served under a path prefix).
@@ -49,7 +50,7 @@ in two sentences.""",
     "mantle_agent": """You are the builder in a software factory. You build a Rasa Mantle conversational agent from a spec.
 
 The workspace is a Mantle project. Read BUILDING.md first — it explains the layout, how to import the
-travel tools (mcp/travel:get_flight, get_weather, get_meeting, estimate_travel_minutes, update_dashboard),
+travel tools (mcp/travel:get_flight, get_weather, get_meeting, estimate_travel_minutes, update_dashboard and the others it lists),
 and where the Mantle reference docs are. Do not change the model settings in integrations.yml.
 Write the skills (skills/<id>/skill.md and memory.yml if needed) and adjust agent.yml persona/rules.
 Then call train_project and fix every error it reports until it returns OK. Never finish without an OK.
@@ -75,12 +76,16 @@ reachable with the available data"."""
 CHECK_HOW = {
     "dashboard": "Use probe_dashboard with realistic updates for every panel (flight, weather, meeting, verdict) "
                  "and compare the page text before and after. Use `look` for visual requests (colours, what is "
-                 "largest, fits without sideways scrolling, `highlighted_briefly` for a highlight on change), and "
-                 "the viewport the brief is about (phone, tablet, projector).",
+                 "largest, fits without sideways scrolling, `highlighted_briefly` and `animated` for a highlight or animation on change), and "
+                 "the viewport the brief is about (phone, tablet, projector). If the brief asks for a map, include a "
+                 "`route` update ({\"panel\": \"route\", \"data\": {\"from\": {\"name\": \"JFK\", \"lat\": 40.6413, "
+                 "\"lon\": -73.7781}, \"to\": {\"name\": \"1 Vanderbilt Ave\", \"lat\": 40.7527, \"lon\": -73.9772}, "
+                 "\"mode\": \"car\", \"minutes\": 55}}) and judge it with `map`.",
     "mantle_agent": "Have a conversation with the agent using talk_to_assistant (several turns, like a real "
                     "traveller, including a follow-up question), then call dashboard_updates_since_check_started to confirm the "
                     "dashboard was updated during the conversation. You can also call the read-only travel tools "
-                    "(get_flight, get_meeting, get_weather, estimate_travel_minutes) to see the true data, so you can "
+                    "(get_flight, get_meeting, get_weather, estimate_travel_minutes, find_alternate_flights, "
+                    "available_meeting_times) to see the true data, so you can "
                     "tell real facts from invented ones. Your conversation is sent in one go, so judge the dashboard by "
                     "its update history and final state against what was said — not by per-message timing.",
 }
