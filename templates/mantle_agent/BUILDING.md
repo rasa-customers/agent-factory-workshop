@@ -33,7 +33,8 @@ What each tool does (they already know the traveller — **never ask the user fo
 | `update_dashboard` | `panel`: `flight` \| `weather` \| `meeting` \| `verdict`; `data`: a JSON object | `{ok, dashboard_url}`: the link the traveller opens |
 
 The dashboard shows whatever keys you put in `data`. Share `dashboard_url` with the traveller as a Markdown link,
-`[Open your dashboard](...)` (the chat turns the first Markdown link in a message into a button). For `verdict` use `{status: yes|tight|no, slack_minutes, reason}`.
+`[Open your dashboard](...)` (the chat turns the first Markdown link in a message into a button). For `verdict` ALWAYS send exactly `{status: yes|tight|no, slack_minutes, reason}` (`reason` = one plain sentence),
+every time, including after a follow-up changes it.
 
 Tip: leave the airport 15 minutes after `estimated_arrival` (pass that as `depart_at`), then compare
 `arrives_at` with the meeting `start` — no clock arithmetic needed beyond that.

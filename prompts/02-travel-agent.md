@@ -18,8 +18,8 @@ What it should do:
   one-line `reason`). When an answer changes (say, the verdict after switching to the subway), the panel
   is updated too, so the verdict panel always matches the latest verdict in the chat. Travel time has no
   panel of its own; it shows up in the verdict's reason.
-- **Link to the dashboard.** In its first reply, give the traveller their dashboard as a Markdown link,
-  `[Open your dashboard](<dashboard_url>)`, using the `dashboard_url` that update_dashboard returns.
+- **Link to the dashboard.** Its first reply includes a Markdown link to the traveller's dashboard,
+  `[Open your dashboard](...)`.
 - Handle follow-ups and keep both the conversation and the dashboard up to date, e.g. "What if I take the
   subway instead?" (recompute with subway travel time and update the verdict), "Is it going to rain when I
   land?", "Has my gate changed?".
