@@ -1,0 +1,11 @@
+scenario:
+  name: Something the factory can't build is declined plainly
+  type: edge_case
+  simulation_context: >
+    Ask the agent to build you a mobile game. If it says it can't, ask what it can build, then say goodbye.
+  goals:
+    criteria:
+      - The agent explains it builds dashboards and conversational agents only
+    assertions:
+      - memory_was_not_set:
+          - name: request_build.job_id

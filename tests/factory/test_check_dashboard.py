@@ -1,0 +1,74 @@
+import shutil
+import socket
+import threading
+import time
+from pathlib import Path
+
+import pytest
+import uvicorn
+
+from factory.checks.dashboard import probe
+from factory.checks.mantle import updates_since
+
+REPO = Path(__file__).parents[2]
+FIX = Path(__file__).parent / "fixtures"
+
+
+def _free_port():
+    s = socket.socket(); s.bind(("127.0.0.1", 0)); p = s.getsockname()[1]; s.close(); return p
+
+
+def _serve(tmp_path, fixture):
+    root = tmp_path / fixture
+    shutil.copytree(REPO / "templates" / "dashboard", root)
+    shutil.copy(FIX / fixture / "index.html", root / "static" / "index.html")
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(f"dash_{fixture}", root / "app.py")
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    port = _free_port()
+    server = uvicorn.Server(uvicorn.Config(mod.app, port=port, log_level="error"))
+    threading.Thread(target=server.run, daemon=True).start()
+    while not server.started:
+        time.sleep(0.05)
+    return f"http://127.0.0.1:{port}", root, server
+
+
+@pytest.fixture
+def dash_ok(tmp_path):
+    url, root, server = _serve(tmp_path, "dash_ok")
+    yield url, root
+    server.should_exit = True
+
+
+@pytest.fixture
+def dash_err(tmp_path):
+    url, root, server = _serve(tmp_path, "dash_err")
+    yield url, root
+    server.should_exit = True
+
+
+async def test_probe_sees_text_change(dash_ok):
+    url, root = dash_ok
+    r = await probe(url, [{"panel": "flight", "data": {"gate": "B22"}}], shots_dir=root)
+    assert "no flight yet" in r["text_before"]
+    assert "B22" in r["text_after"]
+    assert Path(r["screenshot_path"]).exists()
+
+
+async def test_probe_captures_console_errors(dash_err):
+    url, root = dash_err
+    r = await probe(url, [], shots_dir=root)
+    assert any("kaboom" in e for e in r["console_errors"])
+
+
+def test_updates_since_filters():
+    hist = [{"ts": 1.0, "panel": "flight"}, {"ts": 5.0, "panel": "weather"}]
+    assert [h["panel"] for h in updates_since(hist, 2.0)] == ["weather"]
+
+
+async def test_travel_truth_server_is_read_only():
+    from factory.checks.mantle import TRUTH_TOOLS, travel_truth_server
+    srv = travel_truth_server()
+    assert srv.params["url"].endswith("/mcp/")
+    assert set(TRUTH_TOOLS) == {"get_flight", "get_meeting", "get_weather", "estimate_travel_minutes"}
+    assert "update_dashboard" not in TRUTH_TOOLS

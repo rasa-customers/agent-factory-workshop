@@ -1,0 +1,161 @@
+:root{
+  --bg0:#0b0d12;
+  --bg1:#0f131b;
+  --card:#121827;
+  --card2:#0f1522;
+  --stroke:rgba(255,255,255,.10);
+  --stroke2:rgba(255,255,255,.14);
+  --text:#eef1f7;
+  --muted:rgba(238,241,247,.72);
+  --faint:rgba(238,241,247,.55);
+  --good:#26d07c;
+  --warn:#ffcc00;
+  --bad:#ff4d4d;
+  --accent:#7aa2ff;
+  --shadow: 0 12px 35px rgba(0,0,0,.55);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background: radial-gradient(1200px 700px at 20% -10%, rgba(122,162,255,.18), transparent 55%),
+              radial-gradient(900px 600px at 110% 10%, rgba(38,208,124,.12), transparent 55%),
+              linear-gradient(180deg, var(--bg0), var(--bg1));
+  color:var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.topbar{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:16px;
+  padding:18px 20px 12px;
+  border-bottom:1px solid var(--stroke);
+  position:sticky;
+  top:0;
+  backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(11,13,18,.92), rgba(11,13,18,.70));
+  z-index:10;
+}
+
+.brand__title{font-weight:800; letter-spacing:.2px; font-size:22px}
+.brand__subtitle{color:var(--muted); font-size:14px; margin-top:2px}
+
+.status{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:14px; white-space:nowrap}
+.dot{width:10px; height:10px; border-radius:999px; background:rgba(255,255,255,.22); box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+
+.grid{
+  padding:16px 16px 8px;
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:14px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+@media (min-width: 860px){
+  .grid{grid-template-columns: 1fr 1fr; gap:16px; padding:18px 18px 10px}
+}
+
+.panel{
+  background: linear-gradient(180deg, rgba(18,24,39,.96), rgba(12,17,30,.92));
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: visible;
+}
+
+.panel__head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  padding:16px 16px 10px;
+  border-bottom:1px solid var(--stroke);
+}
+
+.panel__title{margin:0; font-size:20px; letter-spacing:.2px}
+.panel__meta{color:var(--faint); font-size:13px; text-align:right}
+
+.panel__body{padding:14px 16px 16px}
+
+.empty{color:var(--muted); font-size:18px; padding:6px 0}
+
+.kv{
+  display:grid;
+  grid-template-columns: 170px 1fr;
+  gap:10px 14px;
+  align-items:start;
+  font-size:18px;
+}
+
+@media (max-width: 430px){
+  .kv{grid-template-columns: 1fr;}
+}
+
+.kv__k{color:var(--muted)}
+.kv__v{color:var(--text); word-break:break-word}
+
+.bigline{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:10px;
+  margin-bottom:12px;
+}
+.bigline__primary{font-size:34px; font-weight:900; letter-spacing:.2px}
+.bigline__secondary{font-size:18px; color:var(--muted)}
+
+.badge{
+  font-size:13px;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid var(--stroke2);
+  background: rgba(255,255,255,.05);
+  color:var(--muted);
+}
+
+.verdict{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.verdict__pill{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  border-radius:14px;
+  border:1px solid var(--stroke2);
+  padding:12px 14px;
+  background: rgba(255,255,255,.04);
+}
+
+.verdict__word{font-size:30px; font-weight:950; letter-spacing:.3px}
+.verdict__detail{color:var(--muted); font-size:16px}
+.verdict__reason{font-size:18px}
+
+.pill--good{border-color: rgba(38,208,124,.35); background: rgba(38,208,124,.10)}
+.pill--warn{border-color: rgba(255,204,0,.40); background: rgba(255,204,0,.11)}
+.pill--bad{border-color: rgba(255,77,77,.40); background: rgba(255,77,77,.10)}
+
+.panel--flash{animation: flash 900ms ease-out 1}
+@keyframes flash{
+  0%{box-shadow: 0 0 0 0 rgba(122,162,255,.0), var(--shadow); border-color: var(--stroke)}
+  20%{box-shadow: 0 0 0 4px rgba(122,162,255,.25), var(--shadow); border-color: rgba(122,162,255,.55)}
+  100%{box-shadow: 0 0 0 0 rgba(122,162,255,.0), var(--shadow); border-color: var(--stroke)}
+}
+
+.footer{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px 16px 18px;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+a{color:var(--accent)}

@@ -1,0 +1,19 @@
+scenario:
+  name: Asking how it is going checks the factory
+  type: happy_path
+  simulation_context: >
+    Paste this brief: "Build a dashboard that shows a single flight's status and gate, updating live."
+    After the agent confirms the build started, ask "how's it going?".
+  goals:
+    criteria:
+      - The agent does not claim the build is finished unless the factory says so
+    assertions:
+      - sequencing:
+          - tool_executed:
+              tool_name: start_build
+              source: mcp
+              mcp_server: factory
+          - tool_executed:
+              tool_name: build_status
+              source: mcp
+              mcp_server: factory

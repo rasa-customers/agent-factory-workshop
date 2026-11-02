@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Factory floor</title>
+<style>
+  :root { --bg:#0e1013; --panel:#171a1f; --line:#262a31; --text:#eceef1; --muted:#9aa1ab;
+          --build:#7cb7ff; --check:#ffc56b; --ok:#5fd38d; --bad:#ff6b6b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:17px/1.45 ui-sans-serif, system-ui, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:12px 20px; align-items:center; padding:18px 24px; border-bottom:1px solid var(--line); }
+  h1 { font-size:22px; margin:0; letter-spacing:.01em; }
+  .pill { padding:4px 12px; border-radius:999px; font-weight:600; font-size:15px; background:var(--line); }
+  .pill.building,.pill.fixing { background:#1d3555; color:var(--build); }
+  .pill.checking { background:#4a3a17; color:var(--check); }
+  .pill.passed { background:#173d27; color:var(--ok); }
+  .pill.failed { background:#4a1c1c; color:var(--bad); }
+  .meta { color:var(--muted); }
+  .result { margin-left:auto; }
+  .result a { color:var(--ok); font-weight:700; font-size:19px; }
+  main { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px 24px 32px; }
+  @media (max-width: 800px) { main { grid-template-columns:1fr; } }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:12px; min-height:60vh; display:flex; flex-direction:column; }
+  section h2 { margin:0; padding:12px 16px; font-size:16px; text-transform:uppercase; letter-spacing:.08em; border-bottom:1px solid var(--line); }
+  #builder h2 { color:var(--build); } #checker h2 { color:var(--check); }
+  ol { list-style:none; margin:0; padding:8px 16px; overflow:auto; flex:1; }
+  li { padding:6px 0; border-bottom:1px dashed var(--line); white-space:pre-wrap; word-break:break-word; }
+  li.tool { color:var(--muted); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; }
+  li.ok { color:var(--ok); } li.bad { color:var(--bad); }
+  #factory { grid-column:1 / -1; min-height:auto; }
+  #factory ol { max-height:9em; }
+  .error { grid-column:1/-1; background:#2a1414; border:1px solid #5a2626; border-radius:12px; padding:14px 16px; display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Factory floor</h1>
+  <span id="state" class="pill">connecting…</span>
+  <span id="round" class="meta"></span>
+  <span class="result" id="result"></span>
+</header>
+<main>
+  <div class="error" id="error"></div>
+  <section id="builder"><h2>Builder</h2><ol></ol></section>
+  <section id="checker"><h2>Checker (independent)</h2><ol></ol></section>
+  <section id="factory"><h2>Factory</h2><ol></ol></section>
+</main>
+<script>
+  const id = location.pathname.split('/').filter(Boolean).pop();
+  const base = location.pathname.replace(/\/$/, '');
+  const lists = {builder: document.querySelector('#builder ol'), checker: document.querySelector('#checker ol'),
+                 factory: document.querySelector('#factory ol')};
+  function add(ev) {
+    if (ev.text.startsWith('__state__')) { refresh(); return; }
+    const li = document.createElement('li');
+    li.textContent = ev.text;
+    if (ev.text.startsWith('→')) li.className = 'tool';
+    if (ev.text.startsWith('✓')) li.className = 'ok';
+    if (ev.text.startsWith('✗')) li.className = 'bad';
+    const ol = lists[ev.actor] || lists.factory;
+    ol.appendChild(li); ol.scrollTop = ol.scrollHeight;
+  }
+  async function refresh() {
+    const r = await fetch(base + '/state'); if (!r.ok) return;
+    const j = await r.json();
+    const pill = document.getElementById('state');
+    pill.textContent = j.state; pill.className = 'pill ' + j.state;
+    document.getElementById('round').textContent = j.round ? 'round ' + j.round : '';
+    document.getElementById('result').innerHTML = j.result_url ? '<a target="_blank" href="' + j.result_url + '">Open the result →</a>' : '';
+    const err = document.getElementById('error');
+    if (j.error) { err.textContent = j.error; err.style.display = 'block'; }
+  }
+  new EventSource(base + '/events').onmessage = e => add(JSON.parse(e.data));
+  refresh();
+</script>
+</body>
+</html>

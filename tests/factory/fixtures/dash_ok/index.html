@@ -1,0 +1,6 @@
+<!doctype html><html><body><div id="gate">no flight yet</div>
+<script>
+function render(s){document.getElementById('gate').textContent = s.flight && s.flight.gate ? 'Gate ' + s.flight.gate : 'no flight yet';}
+fetch('api/state').then(r=>r.json()).then(render);
+new EventSource('api/events').addEventListener('state', e => render(JSON.parse(e.data)));
+</script></body></html>

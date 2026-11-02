@@ -1,0 +1,13 @@
+{
+  "name": "Agent Factory Workshop",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "./setup.sh",
+  "forwardPorts": [5005, 5006, 8600, 8700, 8800],
+  "portsAttributes": {
+    "5005": {"label": "Foreman (Mantle Inspector)"},
+    "5006": {"label": "Your travel agent"},
+    "8600": {"label": "Dashboard"},
+    "8700": {"label": "Travel tools (MCP)"},
+    "8800": {"label": "Factory activity"}
+  }
+}

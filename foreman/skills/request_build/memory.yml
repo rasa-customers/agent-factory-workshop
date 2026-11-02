@@ -1,0 +1,13 @@
+schema:
+  public:
+    kind:
+      type: categorical
+      enum_values: [dashboard, mantle_agent]
+      llm_settable: true
+      description: >
+        What the person wants built - dashboard (a web page / UI / display) or mantle_agent (a chatbot,
+        assistant, or conversational agent). Set it only once it is clear from what they said.
+    job_id:
+      type: text
+      llm_settable: true
+      description: The job_id returned by start_build for the current build. Record it right after starting a build.

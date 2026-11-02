@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Workshop admin{% endblock %}
+{% block body %}
+<h1>Workshop admin</h1>
+<div class="stats" style="margin:16px 0">
+  <div class="stat"><b>{{ counts.total }}</b>{{ counts.total }} signed up</div>
+  <div class="stat"><b>{{ counts.local }}</b>{{ counts.local }} local</div>
+  <div class="stat"><b>{{ counts.cloud }}</b>{{ counts.cloud }} cloud</div>
+  <div class="stat"><b>${{ counts.spend }}</b>LLM spend</div>
+  <div class="stat"><b>{{ counts.vm_states.ready }}</b>VMs ready</div>
+  <div class="stat"><b>{{ counts.vm_states.launching }}</b>VMs launching</div>
+  <div class="stat"><b>{{ counts.vm_states.assigned }}</b>VMs assigned</div>
+</div>
+<form method="post" action="/admin/scale" class="row card"><input type="text" name="n" value="5" style="width:80px"><button>Add machines now</button></form>
+<div class="card"><h2>Attendees</h2><table>
+<tr><th>Email</th><th>Choice</th><th>License</th><th>Spend</th><th>VM</th></tr>
+{% for p in people %}<tr><td>{{ p.email }}</td><td>{{ p.choice or '—' }}</td><td>{{ 'yes' if p.license else 'no' }}</td><td>${{ '%.2f' % p.spend }}</td><td>{{ p.vm_id or '' }}</td></tr>{% endfor %}
+</table></div>
+<div class="card"><h2>Machines</h2><table>
+<tr><th>ID</th><th>State</th><th>Host</th><th>Attendee</th></tr>
+{% for v in vms %}<tr><td>{{ v.id }}</td><td>{{ v.state }}</td><td>{{ v.hostname }}</td><td>{{ v.attendee_email or '' }}</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

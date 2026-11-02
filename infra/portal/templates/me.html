@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>You're in.</h1>
+<p class="lede">Signed in as {{ a.email }}.</p>
+
+<div class="card">
+  <div class="step">1 · Your LLM key</div>
+  <pre>OPENAI_API_KEY={{ a.llm_key }}
+OPENAI_BASE_URL={{ env("PROXY_BASE_URL") }}</pre>
+  <p class="muted">Capped for this workshop and switched off afterwards. The guide shows how to use your own key later.</p>
+</div>
+
+<div class="card">
+  <div class="step">2 · Your Rasa license</div>
+  {% if a.license %}
+    <p class="ok">License saved.</p>
+  {% else %}
+    <p>Request a free developer license — it arrives by email in a minute or two:
+      <a href="{{ env('RASA_LICENSE_URL') }}" target="_blank" rel="noopener">get a Rasa developer license</a>.
+      Then paste it here. (No license yet? Carry on — you can add it later, or ask a Rasa person.)</p>
+  {% endif %}
+  <form method="post" action="/license" class="row">
+    <input type="text" name="license" placeholder="Paste your license" value="{{ a.license or '' }}" required>
+    <button type="submit" class="secondary">Save license</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="step">3 · Where do you want to run it?</div>
+  <form method="post" action="/choose" class="row">
+    <button name="choice" value="local" {% if a.choice == 'local' %}class="secondary"{% endif %}>On my laptop</button>
+    {% if cloud %}<button name="choice" value="cloud" {% if a.choice == 'cloud' %}class="secondary"{% endif %}>In the cloud (iPad, Windows, anything with a browser)</button>{% endif %}
+  </form>
+
+  {% if a.choice == 'local' %}
+    <p style="margin-top:16px">Needs macOS, Linux, or Windows with WSL, and Python 3.11–3.13. Paste this into a terminal:</p>
+    <pre>{{ command }}</pre>
+    <p class="muted">Then run <code>uv run workshop up</code>. The guide in the repo walks you through the rest.</p>
+  {% elif a.choice == 'cloud' %}
+    <div id="vm" style="margin-top:16px"><p>Getting your machine…</p></div>
+    <script>
+      async function poll() {
+        const r = await fetch('/me/vm'); const s = await r.json(); const el = document.getElementById('vm');
+        if (s.state === 'ready') {
+          el.innerHTML = '<p class="ok">Your machine is ready and everything is already running.</p>' +
+            '<p><a class="button" target="_blank" href="' + s.foreman_url + '">Talk to the foreman →</a></p>' +
+            '<p><a target="_blank" href="' + s.url + '">Open the code editor</a> (password <code>' + s.password + '</code>) to see the files and logs.</p>';
+          return;
+        }
+        el.innerHTML = s.state === 'full'
+          ? '<p class="warn">All cloud machines are taken right now — pair with a neighbour, or tell a Rasa person and we\'ll add more.</p>'
+          : '<p>Your machine is starting (usually 2–3 minutes)… this page updates by itself.</p>';
+        setTimeout(poll, 5000);
+      }
+      poll();
+    </script>
+  {% endif %}
+</div>
+{% endblock %}

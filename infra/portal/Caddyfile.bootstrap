@@ -1,0 +1,8 @@
+# Starting config; the portal replaces it through the admin API as soon as it boots.
+{
+  admin 0.0.0.0:2019
+  auto_https off
+}
+:80 {
+  respond "Agent Factory Workshop — starting up" 200
+}

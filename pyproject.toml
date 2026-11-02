@@ -1,0 +1,34 @@
+[project]
+name = "agent-factory-workshop"
+version = "0.1.0"
+description = "Rasa Mantle + OpenAI Agents SDK: a dark software factory that builds a dashboard and the agent that drives it."
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "rasa-pro==3.22.0.dev2",
+    "openai-agents==0.20.0",
+    "mcp>=1.30,<2",
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "pydantic-settings>=2",
+    "playwright>=1.48",
+]
+
+[project.scripts]
+workshop = "workshop.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "respx>=0.21"]
+ops = ["boto3", "botocore[crt]"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["workshop", "factory", "travel_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]

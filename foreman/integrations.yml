@@ -1,0 +1,21 @@
+# The foreman's model goes through the workshop LLM proxy.
+model_groups:
+  - id: main_model
+    models:
+      - provider: openai
+        model: ${FACTORY_MODEL}
+        api_base: ${OPENAI_BASE_URL}
+        api_key: ${OPENAI_API_KEY}
+
+channels:
+  rest:
+    enabled: true
+  inspector:
+    enabled: true
+    # Voice (optional): set DEEPGRAM_API_KEY in .env and the Inspector's microphone button works.
+
+# The factory runs builds in the background and answers immediately, but give it some slack.
+mcp_servers:
+  - name: factory
+    url: http://localhost:8800/mcp/
+    tool_timeout: 30

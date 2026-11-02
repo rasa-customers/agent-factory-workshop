@@ -1,0 +1,54 @@
+# Everything on the portal host: Caddy (TLS + routing), the portal, and the LLM proxy.
+# Run from the repo root:  docker compose -f infra/portal/docker-compose.yml --env-file infra/portal/.env up -d --build
+services:
+  litellm-db:
+    image: postgres:16
+    environment: {POSTGRES_USER: litellm, POSTGRES_PASSWORD: "${LITELLM_DB_PASSWORD}", POSTGRES_DB: litellm}
+    volumes: [litellm-db:/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U litellm"], interval: 3s, retries: 30}
+    restart: unless-stopped
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/litellm.yaml", "--port", "4000"]
+    volumes: [../proxy/litellm.yaml:/app/litellm.yaml:ro]
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD}@litellm-db:5432/litellm
+      UI_USERNAME: admin
+      UI_PASSWORD: ${LITELLM_MASTER_KEY}
+    depends_on: {litellm-db: {condition: service_healthy}}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile.bootstrap:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro   # fullchain.pem + privkey.pem for *.${DOMAIN}, copied in by provision.py
+    restart: unless-stopped
+
+  portal:
+    build: {context: ../.., dockerfile: infra/portal/Dockerfile}
+    environment:
+      DOMAIN: ${DOMAIN}
+      PORTAL_URL: https://portal.${DOMAIN}
+      PROXY_BASE_URL: https://llm.${DOMAIN}/v1
+      REPO_URL: ${REPO_URL}
+      RASA_LICENSE_URL: ${RASA_LICENSE_URL:-https://rasa.com/rasa-pro-developer-edition-license-key-request}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      KEY_BUDGET_USD: ${KEY_BUDGET_USD:-5}
+      WARM: ${WARM:-10}
+      CEILING: ${CEILING:-60}
+      CLOUD_VMS: ${CLOUD_VMS:-on}
+      AWS_DEFAULT_REGION: us-east-1
+    volumes: [portal-data:/data]
+    depends_on: [litellm, caddy]
+    restart: unless-stopped
+
+volumes:
+  portal-data:
+  litellm-db:

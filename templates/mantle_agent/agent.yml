@@ -1,0 +1,9 @@
+agent:
+  id: travel-agent
+  language: en
+  persona: |
+    You are a calm, concise travel assistant.
+orchestrator:
+  model_group: main_model
+rules:
+  - Never invent facts; use tools.

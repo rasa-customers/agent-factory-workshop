@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Agent Factory Workshop{% endblock %}</title>
+<style>
+  :root { --bg:#f6f4ef; --card:#fff; --ink:#1b1b1f; --muted:#62636b; --line:#e3e0d8; --accent:#5a3fd6; --ok:#1d7f4e; --warn:#a15c00; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111214; --card:#1a1b1f; --ink:#ececf0; --muted:#a0a2ab; --line:#2a2b31; --accent:#a493ff; --ok:#5fd38d; --warn:#ffc56b; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.55 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:32px 16px 64px; }
+  h1 { font-size:30px; line-height:1.2; margin:0 0 6px; } h2 { font-size:20px; margin:0 0 10px; }
+  .lede { color:var(--muted); margin:0 0 24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; margin:0 0 16px; }
+  .step { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--accent); margin-bottom:4px; }
+  input[type=email], input[type=text] { width:100%; font:inherit; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--ink); }
+  button, .button { font:inherit; font-weight:600; padding:12px 18px; border-radius:10px; border:0; background:var(--accent); color:#fff; cursor:pointer; text-decoration:none; display:inline-block; }
+  button.secondary { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  code, pre { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; }
+  pre { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px; overflow-x:auto; white-space:pre-wrap; word-break:break-all; margin:8px 0 0; }
+  .muted { color:var(--muted); font-size:15px; } .ok { color:var(--ok); } .warn { color:var(--warn); } .error { color:#c0392b; }
+  table { width:100%; border-collapse:collapse; font-size:14px; } th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; } .stat b { font-size:26px; display:block; }
+</style>
+</head>
+<body><main>{% block body %}{% endblock %}</main></body>
+</html>
