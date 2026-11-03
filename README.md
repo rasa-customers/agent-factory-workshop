@@ -33,12 +33,44 @@ builder and checker).
 | `guide/` | Step-by-step instructions, for the room or on your own. |
 | `infra/` | How the workshop itself ran: sign-up portal, LLM key proxy, cloud machines. You don't need it. |
 
-## Quick start
+## Run it yourself
+
+You need **macOS, Linux, or Windows with WSL**, plus `git`. `setup.sh` installs everything else
+([uv](https://docs.astral.sh/uv/), Python 3.12 if you don't have 3.11–3.13, the Python packages, and a
+headless Chromium the checker uses).
+
+**1. Get an OpenAI API key.** Create one at <https://platform.openai.com/api-keys>. The factory, the
+foreman and the agents it builds all use `gpt-5.2` by default (`FACTORY_MODEL` in `.env`), so the key
+needs access to that model. A dashboard build costs cents; a travel-agent build somewhat more.
+
+**2. Get a free Rasa Developer Edition license.** Request one at
+<https://rasa.com/rasa-pro-developer-edition-license-key-request>. It arrives by email in a minute or two.
+
+**3. Clone the repo and run the setup script** with both keys:
 
 ```bash
-./setup.sh --llm-key sk-... --license <rasa-license>
+git clone https://github.com/rasa-customers/agent-factory-workshop.git
+cd agent-factory-workshop
+./setup.sh --llm-key sk-... --license <your-rasa-license>
+```
+
+It writes your keys to `.env` (only readable by you), downloads the Mantle docs the factory reads while
+building agents, and finishes with `workshop doctor`, which tells you if anything is missing.
+
+**4. Start everything:**
+
+```bash
 uv run workshop up
 ```
 
-Then open the foreman link it prints and tell it what you'd like built (or paste the opening line in `prompts/01-dashboard.md`). Details are in the
-[guide](guide/01-get-set-up.md).
+It prints a link to the **foreman**, the agent you talk to. Open it.
+
+**5. Build the dashboard.** Tell the foreman what you want, or paste the opening line from
+`prompts/01-dashboard.md`. Answer its questions, read the brief, say yes, and follow the link to watch
+the build. Steps: [guide/02-breakout-1-dashboard.md](guide/02-breakout-1-dashboard.md).
+
+**6. Build the travel agent** that drives the dashboard, starting from `prompts/02-travel-agent.md`.
+Steps: [guide/03-breakout-2-agent.md](guide/03-breakout-2-agent.md).
+
+Stuck at any point? `uv run workshop checkpoint` jumps to a known-good dashboard or agent. Optional: add a
+`DEEPGRAM_API_KEY` to `.env` to talk to your agents out loud ([guide/04-voice-optional.md](guide/04-voice-optional.md)).

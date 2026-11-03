@@ -2,6 +2,10 @@
 
 ## In the room: the portal
 
+> **Only for the live session on November 3, 2026.** The portal, the workshop keys and the cloud machines
+> are shut down afterwards. On your own? Follow [Run it yourself](../README.md#run-it-yourself) in the
+> README instead (your own OpenAI key, a free Rasa license, then "On your laptop" below).
+
 Go to **https://portal.factory-workshop.playground-cse.rasa-dev.io** and enter your email (and the event code
 `darkfactory` if it asks; the QR code on the first slide fills it in for you). You get:
 
@@ -11,8 +15,8 @@ Go to **https://portal.factory-workshop.playground-cse.rasa-dev.io** and enter y
    two) and paste it into the portal. No license yet? Carry on and add it later.
 3. **A choice:** run it on your laptop, or in the cloud.
 
-Not in the room? Skip the portal: get a license from the link above, use your own OpenAI key
-([section 5](05-after-the-workshop.md)), and follow "On your laptop".
+Not in the room? Skip the portal: get a license from the link above, use your own OpenAI key, and follow
+"On your laptop".
 
 ## In the cloud (iPad, Windows, any browser)
 
@@ -29,11 +33,12 @@ If the portal says all machines are taken, pair with a neighbour — or tell a R
 Needs **macOS, Linux, or Windows with WSL**, and **Python 3.11–3.13**. You should be comfortable in a
 terminal; we won't cover Python basics.
 
-Choose **On my laptop** and paste the one-liner the portal shows you. It looks like:
+In the room, choose **On my laptop** and paste the one-liner the portal shows you (it includes the
+workshop proxy's `--base-url`). On your own, use your OpenAI key; the base URL defaults to OpenAI:
 
 ```bash
-git clone <repo-url> agent-factory-workshop && cd agent-factory-workshop \
-  && ./setup.sh --llm-key <your key> --base-url <proxy url> --license <your license>
+git clone https://github.com/rasa-customers/agent-factory-workshop.git && cd agent-factory-workshop \
+  && ./setup.sh --llm-key <your OpenAI key> --license <your Rasa license>
 ```
 
 `setup.sh` installs [uv](https://docs.astral.sh/uv/) (and Python 3.12 if you need it), the Python
