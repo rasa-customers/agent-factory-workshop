@@ -1,3 +1,4 @@
+import os
 from infra.portal.caddy import render_caddyfile
 from infra.vm.config_agent import public_urls, render_env
 
@@ -91,3 +92,24 @@ def test_studio_route_only_when_studio_is_set_up(monkeypatch):
     assert "studio." not in render_caddyfile([], DOMAIN)
     monkeypatch.setenv("STUDIO_UPSTREAM", "10.77.1.9:4000")
     assert "http://studio.fw.example {\n  reverse_proxy 10.77.1.9:4000" in render_caddyfile([], DOMAIN)
+
+
+def test_a_waiting_machine_restarts_its_agent_when_the_code_changes(tmp_path):
+    # Spares pull new code while they wait; the running agent must not hand out the old settings.
+    from infra.vm.config_agent import should_reload
+    src = tmp_path / "config_agent.py"
+    src.write_text("old")
+    started = src.stat().st_mtime
+    assert not should_reload(src, started, assigned=False)
+    os.utime(src, (started + 60, started + 60))
+    assert should_reload(src, started, assigned=False)
+
+
+def test_an_assigned_machine_keeps_its_agent_running_when_the_code_changes(tmp_path):
+    # Restarting would re-apply the config and restart the attendee's services mid-session.
+    from infra.vm.config_agent import should_reload
+    src = tmp_path / "config_agent.py"
+    src.write_text("old")
+    started = src.stat().st_mtime
+    os.utime(src, (started + 60, started + 60))
+    assert not should_reload(src, started, assigned=True)

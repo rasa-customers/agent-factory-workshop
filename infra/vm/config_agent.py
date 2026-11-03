@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -77,11 +78,22 @@ def apply(cfg: dict, vm_id: str, domain: str) -> None:
     subprocess.run(["systemctl", "reset-failed", "workshop-up"])
     subprocess.run(["systemctl", "restart", "workshop-up"])
 
+def should_reload(source: Path, started_mtime: float, *, assigned: bool) -> bool:
+    """A waiting machine keeps pulling new code; restart (systemd brings it back) so it applies the new settings.
+    Never once assigned: restarting re-applies the config and restarts the attendee's services."""
+    return not assigned and source.stat().st_mtime != started_mtime
+
+
 def main() -> None:
     conf = _read_env(Path("/etc/factory-workshop.env"))
     vm_id, secret, portal, domain = conf["VM_ID"], conf["CONFIG_SECRET"], conf["PORTAL_URL"], conf["DOMAIN"]
+    source = Path(__file__)
+    started_mtime = source.stat().st_mtime
     applied = None
     while True:
+        if should_reload(source, started_mtime, assigned=applied is not None):
+            print("new code pulled while waiting; restarting to pick it up", flush=True)
+            sys.exit(0)
         try:
             cfg = _fetch(portal, vm_id, secret)
             if cfg.get("assigned") and cfg != applied:
