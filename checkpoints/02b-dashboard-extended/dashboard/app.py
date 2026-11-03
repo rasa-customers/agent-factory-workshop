@@ -1,7 +1,7 @@
 """Dashboard server — the fixed contract. The factory builds the UI in static/.
 
 Contract:
-  POST /api/state   {"panel": "flight"|"weather"|"meeting"|"verdict"|"route", "data": {...}}  → merges, returns full state
+  POST /api/state   {"panel": "flight"|"weather"|"meeting"|"verdict"|"route", "data": {...}}  → merges (a `note` lasts only until the next update), returns full state
   GET  /api/state   → {"flight": {...}|null, "weather": ..., "meeting": ..., "verdict": ..., "route": ...}
 
   `route` is data for an optional map: {"from": {name, lat, lon}, "to": {name, lat, lon}, "mode", "minutes"}.
@@ -60,7 +60,10 @@ app = FastAPI(title="Flight dashboard")
 
 
 async def set_panel(panel: str, data: dict[str, Any]) -> dict[str, Any]:
-    hub.state[panel] = {**(hub.state[panel] or {}), **data}
+    # Merge, so an update can send just what changed. A panel's `note` belongs to the update that sent it:
+    # the example trip's "Example data…" note goes as soon as the travel agent sends its own data.
+    kept = {k: v for k, v in (hub.state[panel] or {}).items() if k != "note"}
+    hub.state[panel] = {**kept, **data}
     await hub.publish()
     return hub.state
 

@@ -67,3 +67,18 @@ def test_route_panel_for_a_map(client):
 def test_checkpoint_dashboard_runs_the_same_server():
     checkpoint = Path(__file__).parents[2] / "checkpoints" / "02-dashboard-built" / "dashboard" / "app.py"
     assert checkpoint.read_text() == APP.read_text()
+
+
+def test_the_agents_own_update_clears_the_example_note(client):
+    c, _ = client
+    c.post("/api/state", json={"panel": "verdict", "data": {"status": "tight", "reason": "example",
+                                                              "note": "Example data: your travel agent will fill this in"}})
+    c.post("/api/state", json={"panel": "verdict", "data": {"status": "no", "reason": "the agent's own"}})
+    assert c.get("/api/state").json()["verdict"] == {"status": "no", "reason": "the agent's own"}
+
+
+def test_a_note_sent_with_the_update_is_kept(client):
+    c, _ = client
+    c.post("/api/state", json={"panel": "flight", "data": {"gate": "B22", "note": "Gate changed twice today"}})
+    c.post("/api/state", json={"panel": "flight", "data": {"status": "Delayed", "note": "Still delayed"}})
+    assert c.get("/api/state").json()["flight"]["note"] == "Still delayed"
