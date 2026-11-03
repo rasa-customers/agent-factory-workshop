@@ -60,7 +60,9 @@ async def estimate_travel_minutes(origin: str, destination_address: str, depart_
 @mcp.tool()
 async def find_alternate_flights() -> dict:
     """Other flights from Chicago to New York today that still have seats, with where and when they land.
-    Use estimate_travel_minutes from each one's arrival_airport to compare them."""
+    slack_minutes_by_car is already worked out for each: minutes to spare before the meeting if you land,
+    take 15 minutes to leave the airport and go by car (negative means late). Use it as given; for the
+    subway, call estimate_travel_minutes from that flight's arrival_airport."""
     return {"flights": flight_data.alternate_flights()}
 
 

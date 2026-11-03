@@ -9,7 +9,7 @@ scenario:
   goals:
     criteria:
       - The agent asks no more than three questions before showing a brief
-      - The agent shows the whole updated brief, including the meeting address, before building
+      - Before building, the agent shows the whole updated brief, and it now asks for the meeting address in large type
       - Nothing is built until the attendee says yes
     assertions:
       - sequencing:

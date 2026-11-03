@@ -1,0 +1,29 @@
+# The core job: answer "will I make it?" from the travel tools, and put the same answer on the dashboard.
+# Today's trip: RA 2026 lands at JFK 40 minutes late; by car that leaves about 5 minutes before the 14:30 meeting.
+scenario:
+  name: The traveller asks if they'll make the meeting and gets the dashboard's answer
+  type: happy_path
+  simulation_context: >
+    You are a busy traveller flying to New York for a meeting. Ask: "Am I going to make my meeting?"
+    If the agent asks how you're getting from the airport, say by taxi. Once you have an answer, say thanks.
+  goals:
+    criteria:
+      - The agent says the trip is tight, with only a few minutes to spare before the meeting
+      - The agent says the flight is delayed by 40 minutes and lands around 13:15 (1:15pm)
+      - The agent gives the car ride from JFK as about 55 minutes
+      - None of the agent's chat messages contain raw JSON or tool field names (the event ledger does not count)
+    assertions:
+      - tool_executed:
+          tool_name: get_flight
+          source: mcp
+          mcp_server: travel
+      - tool_executed:
+          tool_name: estimate_travel_minutes
+          source: mcp
+          mcp_server: travel
+      - tool_executed:
+          tool_name: update_dashboard
+          source: mcp
+          mcp_server: travel
+          arguments:
+            panel: verdict

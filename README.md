@@ -29,6 +29,7 @@ builder and checker).
 | `templates/` | What each build starts from. |
 | `travel_mcp/` | The tools the travel agent uses: flight, weather (live, Open-Meteo), meeting, travel time, dashboard. |
 | `checkpoints/` | Known-good results, if you want to skip ahead. |
+| `foreman/eval/`, `templates/mantle_agent/eval/` | Mantle evals (simulated conversations) for the foreman and for every built agent: `uv run workshop eval foreman` or `agent`. |
 | `guide/` | Step-by-step instructions, for the room or on your own. |
 | `infra/` | How the workshop itself ran: sign-up portal, LLM key proxy, cloud machines. You don't need it. |
 

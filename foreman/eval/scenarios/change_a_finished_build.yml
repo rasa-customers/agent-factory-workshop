@@ -3,13 +3,18 @@ scenario:
   type: happy_path
   simulation_context: >
     You already have a finished dashboard. Say: "I've looked at my dashboard. Can you make the verdict
-    turn red when it's tight or a no?" Then say thanks.
+    turn red when it's tight or a no?" If the agent says it is building your change, say thanks and goodbye.
+    If it says another build has to finish first, say "ok, I'll ask again later" and goodbye.
   goals:
     criteria:
       - The agent restates the change in one sentence
-      - The agent shares a link to watch the change being built
+      - The agent does not write a new brief or start a fresh build
+      - The agent never promises to message the person later or to apply the change later on its own
     assertions:
       - tool_executed:
           tool_name: revise_build
           source: mcp
           mcp_server: factory
+      - memory_was_not_set:
+          - name: request_build.brief_approved
+            value: true

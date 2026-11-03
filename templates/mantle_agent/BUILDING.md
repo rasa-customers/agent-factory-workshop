@@ -9,6 +9,7 @@ This folder is a Mantle project. Run every `rasa` command from here.
   (when to activate), optional `import_tools`, then prose instructions.
 - `skills/<skill_id>/memory.yml` — values the skill remembers (`schema: public: <field>: {type, llm_settable, description}`).
 - Delete `skills/placeholder/` once you have a real skill (a project needs at least one skill).
+- `eval/` — the traveller's own tests (`workshop eval agent`). Leave it alone; don't edit or delete it.
 
 ## Using the travel tools
 Import them in a skill's frontmatter:
@@ -48,7 +49,7 @@ What each tool does (they already know the traveller — **never ask the user fo
 | `get_meeting` | none | `title`, `start` (ISO time), `address` |
 | `get_weather` | `location` (e.g. "New York"), `at` (ISO time, e.g. the flight's `estimated_arrival`) | `temperature_c`, `condition`, wind/precipitation |
 | `estimate_travel_minutes` | `origin` ("JFK", "LGA" or "EWR"), `destination_address`, `depart_at` (ISO), `mode`: `"car"` or `"subway"` only | `minutes`, `arrives_at` (ISO clock time you'd get there), `note`, `from`/`to` (name, lat, lon) |
-| `find_alternate_flights` | none | `flights`: other flights today with `flight_number`, `airline`, `arrival_airport`, `departs`, `estimated_arrival`, `seats_left` |
+| `find_alternate_flights` | none | `flights`: other flights today with `flight_number`, `airline`, `arrival_airport`, `departs`, `estimated_arrival`, `seats_left`, and `slack_minutes_by_car` (minutes to spare by car, already worked out; negative = late; use it as given) |
 | `available_meeting_times` | none | `slots`: later ISO start times the meeting can move to, and `current_start` |
 | `reschedule_meeting` | `start`: one of the slots | `{ok, meeting}`. Only call it after the traveller says yes to that time. |
 | `update_dashboard` | `panel`: `flight` \| `weather` \| `meeting` \| `verdict` \| `route`; `data`: a JSON object | `{ok, dashboard_url}`: the link the traveller opens |

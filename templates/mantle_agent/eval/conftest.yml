@@ -1,0 +1,14 @@
+# Models for `workshop eval`: one plays the attendee, one judges the conversation. Both go through the workshop proxy.
+simulation:
+  llm:
+    provider: openai
+    model: gpt-5-mini
+    api_base: ${OPENAI_BASE_URL}
+    api_key: ${OPENAI_API_KEY}
+
+evaluation:
+  llm:
+    provider: openai
+    model: ${FACTORY_MODEL}
+    api_base: ${OPENAI_BASE_URL}
+    api_key: ${OPENAI_API_KEY}

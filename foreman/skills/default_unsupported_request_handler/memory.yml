@@ -1,0 +1,4 @@
+schema:
+  public:
+    request_type:
+      type: str

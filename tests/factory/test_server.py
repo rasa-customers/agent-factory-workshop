@@ -39,7 +39,7 @@ async def test_status_unknown_job(slow_server):
 
 async def test_result_unknown_job(slow_server):
     s = await call_tool(slow_server, "build_result", {"job_id": "missing"})
-    assert s["state"] == "unknown"
+    assert s.get("is_error") and "restart" in s["error"]
 
 
 async def test_save_brief_rejects_unknown_kind(slow_server):
@@ -57,7 +57,7 @@ async def test_start_build_builds_the_latest_saved_brief(store, slow_server):
 
 async def test_start_build_needs_a_saved_brief(slow_server):
     r = await call_tool(slow_server, "start_build", {})
-    assert "error" in r and "save_brief" in r["error"]
+    assert r.get("is_error") and "save_brief" in r["error"]
 
 
 async def test_a_saved_brief_is_built_once(slow_server):

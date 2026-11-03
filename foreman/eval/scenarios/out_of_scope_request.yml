@@ -5,7 +5,10 @@ scenario:
     Ask the agent to build you a mobile game. If it says it can't, ask what it can build, then say goodbye.
   goals:
     criteria:
-      - The agent explains it builds dashboards and conversational agents only
+      - The agent's first reply to the mobile game request says what the factory can build (a dashboard or a conversational agent)
+      - The agent never asks for trip details such as dates, cities, budget or must-dos
     assertions:
       - memory_was_not_set:
           - name: request_build.job_id
+      - skill_activated:
+          skill_id: default_unsupported_request_handler

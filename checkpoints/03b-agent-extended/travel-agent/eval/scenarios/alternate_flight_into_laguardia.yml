@@ -1,0 +1,24 @@
+# The alternate-flight skill: RA 2030 into LaGuardia lands 12:55; with the 35-minute taxi that is 45 minutes
+# to spare. SK 418 into Newark and RA 2048 into JFK both arrive too late to help.
+scenario:
+  name: Looking for another flight finds RA 2030 into LaGuardia
+  type: happy_path
+  simulation_context: >
+    You are flying to New York for a meeting and your flight is delayed. Ask whether there's an earlier
+    flight that would give you more time. Once the agent recommends one, say you'll take it and ask it to put it on your dashboard. Then say thanks.
+  goals:
+    criteria:
+      - The agent recommends RA 2030 into LaGuardia
+      - The agent does not recommend SK 418 or RA 2048, which would both get the traveller there late
+      - The agent does not claim it booked or changed the flight
+    assertions:
+      - tool_executed:
+          tool_name: find_alternate_flights
+          source: mcp
+          mcp_server: travel
+      - tool_executed:
+          tool_name: update_dashboard
+          source: mcp
+          mcp_server: travel
+          arguments:
+            panel: flight

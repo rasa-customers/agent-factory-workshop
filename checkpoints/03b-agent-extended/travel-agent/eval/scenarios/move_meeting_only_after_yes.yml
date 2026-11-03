@@ -1,0 +1,30 @@
+# The meeting-buffer skill: offer later times with enough slack, and move the meeting only after a yes.
+# By taxi the traveller arrives at 14:25; 14:45 gives 20 minutes, the first slot with at least 15.
+scenario:
+  name: The meeting moves to a time with 15 minutes to spare, and only after a yes
+  type: happy_path
+  simulation_context: >
+    You are flying to New York for a meeting and want more breathing room. Ask whether you'll make it.
+    When the agent offers to move the meeting, say yes and ask what times are free. When it suggests a
+    time, accept it. Then say thanks.
+  goals:
+    criteria:
+      - Every new meeting time the agent offers leaves at least 15 minutes between arriving and the meeting
+      - The agent asks the traveller to pick or confirm a time before moving the meeting
+      - After moving it, the agent says the new meeting time
+    assertions:
+      - sequencing:
+          - tool_executed:
+              tool_name: available_meeting_times
+              source: mcp
+              mcp_server: travel
+          - tool_executed:
+              tool_name: reschedule_meeting
+              source: mcp
+              mcp_server: travel
+      - tool_executed:
+          tool_name: update_dashboard
+          source: mcp
+          mcp_server: travel
+          arguments:
+            panel: meeting

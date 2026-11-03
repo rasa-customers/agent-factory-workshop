@@ -6,7 +6,10 @@ dashboard from Breakout 1 in sync.
 - **Tools.** All the tools come from the travel MCP server (`mcp/travel:...`): get_flight,
   get_weather, get_meeting, estimate_travel_minutes and update_dashboard, plus find_alternate_flights,
   available_meeting_times and reschedule_meeting when the brief asks for them. It only reschedules the
-  meeting after the traveller says yes to a specific time.
+  meeting after the traveller says yes to a specific time. It can't book or change flights: when the
+  traveller picks an alternate, it says so plainly ("I can't book flights; I've put RA 2030 on your
+  dashboard as the plan") and never says it switched, rebooked or changed their flight. For each
+  alternate it uses the `slack_minutes_by_car` the tool returns rather than working it out.
 - **Facts come from the tools.** It looks up the flight (get_flight), the weather at the destination for
   the estimated arrival time (get_weather), and the meeting (get_meeting). It never invents flight,
   weather or meeting details and never asks the traveller for them. Anything the tools return (including

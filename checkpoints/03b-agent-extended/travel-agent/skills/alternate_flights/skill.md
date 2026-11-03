@@ -21,7 +21,10 @@ When the plan is **tight** (<15 min slack) or **no** (late), offer and (when acc
 - **Every alternate flight you mention in chat must come from `find_alternate_flights`.**
 - **Every buffer/slack claim for an alternate must be backed by your own `estimate_travel_minutes` call using that alternate’s `arrival_airport` and `estimated_arrival`.**
 - Do not guess gates, delays, seat counts, departs/arrivals, or ETAs.
-- There is no booking tool: never claim you rebooked; you can only update the **plan/dashboard**.
+- There is no booking tool: never say you switched, rebooked or changed their flight. Say plainly "I can't book
+  flights; I've put {flight} on your dashboard as the plan" and that they need to rebook it themselves.
+- Each flight from `find_alternate_flights` already has `slack_minutes_by_car`. Use it as given for car
+  travel; don't work it out yourself.
 
 # Procedure
 

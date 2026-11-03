@@ -1,4 +1,4 @@
-"""`workshop` command: doctor | up | checkpoint."""
+"""`workshop` command: doctor | up | checkpoint | eval."""
 from __future__ import annotations
 
 import argparse
@@ -33,11 +33,19 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("up", help="start the factory, foreman and tools")
     cp = sub.add_parser("checkpoint", help="jump to a known-good build")
     cp.add_argument("name")
+    ev = sub.add_parser("eval", help="run simulated-conversation evals against the foreman or your agent")
+    ev.add_argument("target", choices=["foreman", "agent"])
+    ev.add_argument("scenarios", nargs="*", help="scenario names (default: all of eval/scenarios/)")
+    ev.add_argument("--runs", type=int, default=1, choices=range(1, 11), metavar="1-10",
+                    help="how many times to run each scenario (default 1)")
     args = parser.parse_args(argv)
     if args.cmd == "doctor":
         return doctor()
     from workshop import procs  # wired in Task 9
 
+    if args.cmd == "eval":
+        from workshop import evals
+        return evals.run(args.target, args.scenarios, args.runs)
     if args.cmd == "up":
         return procs.up()
     return procs.checkpoint(args.name)

@@ -92,3 +92,18 @@ def test_reset_is_not_a_tool_built_agents_could_call():
     import asyncio
     names = {t.name for t in asyncio.run(server.mcp.list_tools())}
     assert "reset" not in names and "reset_trip" not in names
+
+
+async def test_each_alternate_says_how_much_time_it_leaves_by_car(call):
+    """So the agent never does the arithmetic itself: land + 15 minutes to deplane + the taxi, against the meeting."""
+    by_number = {f["flight_number"]: f for f in (await call("find_alternate_flights", {}))["flights"]}
+    assert by_number["RA 2030"]["slack_minutes_by_car"] == 45
+    assert by_number["SK 418"]["slack_minutes_by_car"] == -20
+    assert by_number["RA 2048"]["slack_minutes_by_car"] == -45
+
+
+async def test_alternate_slack_follows_a_moved_meeting(call):
+    slot = (await call("available_meeting_times", {}))["slots"][0]  # 14:45
+    await call("reschedule_meeting", {"start": slot})
+    by_number = {f["flight_number"]: f for f in (await call("find_alternate_flights", {}))["flights"]}
+    assert by_number["SK 418"]["slack_minutes_by_car"] == -5

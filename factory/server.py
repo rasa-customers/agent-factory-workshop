@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Awaitable, Callable
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, StreamingResponse
 
@@ -69,7 +70,7 @@ def build_server(store: JobStore, runner: Runner, *, port: int = 8800) -> FastMC
         """Build the brief most recently saved with save_brief (the factory adds its own fixed contract).
         Returns immediately with a job_id and a link where the build can be watched live."""
         if not saved:
-            return {"error": "No brief is saved. Agree a brief with the person and call save_brief first."}
+            raise ToolError("No brief is saved. Agree a brief with the person and call save_brief first.")
         kind, brief = saved.popitem()
         job = store.create(kind, full_spec(kind, brief), brief=brief)  # type: ignore[arg-type]
         store.add_event(job.id, "factory", f"Job received: build a {kind.replace('_', ' ')}.")
@@ -83,11 +84,13 @@ def build_server(store: JobStore, runner: Runner, *, port: int = 8800) -> FastMC
         change; without it, the most recent one."""
         latest = store.latest()
         if not job_id and latest is not None and latest.state not in ("passed", "failed"):
-            return {"error": "A build is still running. Wait for it to finish, then ask for the change."}
+            raise ToolError("A build is still running, so this change can't start yet. Tell the person to "
+                            "ask again once it has finished (the build page shows when). You can't message "
+                            "them later, so don't promise to.")
         base = store.get(job_id) if job_id else store.latest(state="passed", kind=kind or None)
         if base is None or base.state != "passed":
-            return {"error": "There is nothing finished to change yet. Start a build first, or wait for one "
-                             "to pass."}
+            raise ToolError("There is nothing finished to change yet. Start a build first, or wait for one "
+                            "to pass.")
         brief = revised_brief(base.brief, change)
         job = store.create(base.kind, full_spec(base.kind, brief), brief=brief, based_on=base.id,
                            change=change.strip())
@@ -118,7 +121,7 @@ def build_server(store: JobStore, runner: Runner, *, port: int = 8800) -> FastMC
         """Put an earlier build that passed back live (use list_builds to find it). Later changes build on it."""
         base = store.get(job_id)
         if base is None or base.state != "passed":
-            return {"error": "Only a build that passed can be restored. Use list_builds to pick one."}
+            raise ToolError("Only a build that passed can be restored. Use list_builds to pick one.")
         job = store.create(base.kind, base.spec, brief=base.brief, based_on=base.id,
                            change=f"Go back to build {base.id}.", restore=True)
         store.add_event(job.id, "factory", f"Job received: put build {base.id} back live.")
@@ -141,7 +144,9 @@ def build_server(store: JobStore, runner: Runner, *, port: int = 8800) -> FastMC
         error. job_id defaults to the most recent build."""
         job = find(job_id)
         if job is None:
-            return unknown
+            raise ToolError(unknown["hint"])
+        if job.state not in ("passed", "failed"):
+            raise ToolError(f"The build isn't finished yet (it is {job.state}). Use build_status to report progress.")
         return {"job_id": job.id, "state": job.state, "result_url": job.result_url, "summary": job.summary,
                 "check_report": job.check_report, "error": job.error}
 

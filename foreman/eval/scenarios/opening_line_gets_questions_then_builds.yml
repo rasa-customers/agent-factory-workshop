@@ -23,3 +23,5 @@ scenario:
               tool_name: start_build
               source: mcp
               mcp_server: factory
+      - bot_uttered:
+          utter_name: utter_build_links

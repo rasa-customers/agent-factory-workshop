@@ -80,6 +80,49 @@ The trip resets each time the factory checks a build, so a moved meeting doesn't
 
 Smaller changes work too: its tone, emoji status markers, ending every reply with one suggestion.
 
+## Test it with evals
+
+The factory's checker is one way to test an agent. Mantle has its own: **evals**. An LLM plays the
+traveller from a short scenario file, holds a whole conversation with your agent, and a second LLM
+judges it. Plain-sentence **criteria** cover what you'd need to read the chat to decide ("says the
+trip is tight"). **Assertions** check what the agent actually did, from its recorded events: which
+tools ran, with which arguments, which skill handled it.
+
+Your agent came with two scenarios in `workspace/latest-agent/eval/scenarios/`. In the code editor's
+terminal (or yours, on a laptop):
+
+```bash
+uv run workshop eval agent                 # every scenario, once each
+uv run workshop eval agent trip_check --runs 3
+```
+
+Each run writes a report with the transcript, each criterion's verdict and the judge's reason. Open
+the folder it prints. Running a scenario three times tells you more than once: the traveller is
+simulated, so no two conversations are the same.
+
+Then write your own. Copy `trip_check.yml`, change what the traveller does and what should be true.
+For the alternate-flight skill:
+
+```yaml
+scenario:
+  name: Looking for another flight finds RA 2030 into LaGuardia
+  simulation_context: >
+    You are flying to New York and your flight is delayed. Ask whether there's an earlier flight that
+    would give you more time. Once the agent recommends one, say thanks.
+  goals:
+    criteria:
+      - The agent recommends RA 2030 into LaGuardia
+      - The agent does not claim it booked or changed the flight
+    assertions:
+      - tool_executed:
+          tool_name: find_alternate_flights
+          source: mcp
+          mcp_server: travel
+```
+
+The `03b-agent-extended` checkpoint has this one and one for moving the meeting. Every assertion you can
+use is in the Mantle docs, under *Testing → Assertions*.
+
 ## If it doesn't pass
 
 ```bash

@@ -85,14 +85,14 @@ async def test_revise_build_can_target_a_job(store):
 async def test_revise_build_needs_a_finished_build(store):
     server = build_server(store, idle)
     r = await call_tool(server, "revise_build", {"change": "Bigger verdict."})
-    assert "error" in r and "nothing" in r["error"].lower()
+    assert r.get("is_error") and "nothing" in r["error"].lower()
 
 
 async def test_revise_build_waits_for_a_running_build(store):
     store.create("dashboard", "x", brief="x")  # still queued
     server = build_server(store, idle)
     r = await call_tool(server, "revise_build", {"change": "Bigger verdict."})
-    assert "error" in r and "still" in r["error"].lower()
+    assert r.get("is_error") and "still" in r["error"].lower()
 
 
 async def test_status_and_result_default_to_the_latest_job(store):
@@ -101,6 +101,7 @@ async def test_status_and_result_default_to_the_latest_job(store):
     await asyncio.sleep(0.01)
     s = await call_tool(server, "build_status", {})
     assert s["job_id"] == r["job_id"]
+    store.update(r["job_id"], state="passed")
     res = await call_tool(server, "build_result", {})
     assert res["job_id"] == r["job_id"]
 
@@ -194,4 +195,11 @@ async def test_restore_build_refuses_a_build_that_did_not_pass(store):
     store.update(bad.id, state="failed")
     server = build_server(store, idle)
     r = await call_tool(server, "restore_build", {"job_id": bad.id})
-    assert "error" in r
+    assert r.get("is_error")
+
+
+async def test_result_of_an_unfinished_build_is_an_error_so_no_link_buttons_follow(store):
+    store.create("dashboard", "x", brief="x")  # still queued
+    server = build_server(store, idle)
+    r = await call_tool(server, "build_result", {})
+    assert r.get("is_error") and "build_status" in r["error"]

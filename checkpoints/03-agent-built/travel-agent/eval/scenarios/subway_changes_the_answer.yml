@@ -1,0 +1,24 @@
+# A follow-up the agent must recompute rather than guess: the subway from JFK takes 75 minutes, not 55.
+scenario:
+  name: Switching to the subway changes the verdict
+  type: happy_path
+  simulation_context: >
+    You are flying to New York for a meeting. Ask whether you'll make it. After the agent answers, say:
+    "What if I take the subway instead?" Once it answers that, say thanks.
+  goals:
+    criteria:
+      - After the subway question, the agent says the traveller would be late for the meeting
+      - The agent's second answer uses a new travel estimate rather than reusing the taxi time
+    assertions:
+      - tool_executed:
+          tool_name: estimate_travel_minutes
+          source: mcp
+          mcp_server: travel
+          arguments:
+            mode: subway
+      - tool_executed:
+          tool_name: update_dashboard
+          source: mcp
+          mcp_server: travel
+          arguments:
+            panel: verdict

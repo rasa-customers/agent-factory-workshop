@@ -29,6 +29,7 @@ TRAVEL = {
     ("EWR", "subway"): (65, "AirTrain and NJ Transit to Penn Station, then the subway."),
 }
 
+DEPLANE_MINUTES = 15  # from landing to leaving the airport, as the verdict rule assumes
 _meeting_start: str | None = None  # set when the meeting is rescheduled; reset() puts it back
 
 
@@ -73,9 +74,15 @@ def alternate_flights() -> list[dict]:
         return {"flight_number": number, "airline": airline, "origin": "ORD", "arrival_airport": code,
                 "departs": _at(CHI, *dep),
                 "estimated_arrival": _at(NY, *arr), "seats_left": seats, "status": status}
-    return [alt("RA 2030", "Rasa Air", "LGA", (10, 5), (12, 55), 4, "On time"),
-            alt("SK 418", "Skyline", "EWR", (10, 20), (13, 35), 2, "On time"),
-            alt("RA 2048", "Rasa Air", "JFK", (11, 0), (14, 5), 9, "On time")]
+    flights = [alt("RA 2030", "Rasa Air", "LGA", (10, 5), (12, 55), 4, "On time"),
+               alt("SK 418", "Skyline", "EWR", (10, 20), (13, 35), 2, "On time"),
+               alt("RA 2048", "Rasa Air", "JFK", (11, 0), (14, 5), 9, "On time")]
+    start = datetime.fromisoformat(meeting()["start"])
+    for f in flights:  # worked out here so the agent never has to do the arithmetic
+        at_meeting = (datetime.fromisoformat(f["estimated_arrival"]) + timedelta(minutes=DEPLANE_MINUTES)
+                      + timedelta(minutes=TRAVEL[(f["arrival_airport"], "car")][0]))
+        f["slack_minutes_by_car"] = round((start - at_meeting).total_seconds() / 60)
+    return flights
 
 
 def meeting_slots() -> list[str]:

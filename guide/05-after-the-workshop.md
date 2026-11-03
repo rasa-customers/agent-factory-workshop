@@ -33,6 +33,8 @@ To go further:
 | Change the loop (rounds, what gets fed back) | `factory/pipeline.py` |
 | Change what every brief must include | `factory/contracts/` |
 | Teach the foreman new requests | `foreman/skills/` — then `rasa train` in `foreman/` |
+| Test the foreman | Scenarios in `foreman/eval/scenarios/`, then `uv run workshop eval foreman` (these start real builds) |
+| Test a built agent | Scenarios in `workspace/latest-agent/eval/scenarios/`, then `uv run workshop eval agent` |
 
 ## Checkpoints
 
@@ -41,7 +43,9 @@ The repo includes known-good results for each stage:
 | Command | Gives you |
 |---|---|
 | `uv run workshop checkpoint 02-dashboard-built` | The finished dashboard |
+| `uv run workshop checkpoint 02b-dashboard-extended` | The dashboard with a new colour scheme, an animation and a map |
 | `uv run workshop checkpoint 03-agent-built` | The finished travel agent (and dashboard) |
+| `uv run workshop checkpoint 03b-agent-extended` | The travel agent with alternate flights and moving the meeting, plus evals for both |
 
 Their source is in `checkpoints/`, so you can read exactly what the factory produced.
 

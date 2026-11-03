@@ -1,0 +1,14 @@
+responses:
+  utter_decline_in_domain_out_of_scope:
+    - text: |
+        This factory can't build that. It builds two things: a dashboard (a live web page) or a
+        conversational agent. Want to start one of those?
+      metadata:
+        rephrase: true
+
+  utter_decline_out_of_domain_out_of_scope:
+    - text: |
+        That's outside what I do. I run a factory that builds two things: a dashboard (a live web page)
+        or a conversational agent. Want to start one of those?
+      metadata:
+        rephrase: true
