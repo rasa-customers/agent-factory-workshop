@@ -1,6 +1,8 @@
 """The factory line: build → check → feed failures back → build again, until the checker passes."""
 from __future__ import annotations
 
+import json
+
 import time
 from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
@@ -23,14 +25,39 @@ CHECKPOINT = {"dashboard": "02-dashboard-built", "mantle_agent": "03-agent-built
 MAX_TURNS = 40
 
 
+DETAIL_LIMIT = 4000
+
+
+def clip(text: str, limit: int = DETAIL_LIMIT) -> str:
+    return text if len(text) <= limit else f"{text[:limit]}\n… ({len(text) - limit:,} more characters)"
+
+
+def pretty_args(raw: str) -> str:
+    try:
+        return json.dumps(json.loads(raw), indent=1, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return raw or ""
+
+
 class ActivityHooks(RunHooks):
-    """Turns every tool call into a line on the activity page."""
+    """Turns every tool call into a line on the activity page; the line expands to its arguments, then its result."""
 
     def __init__(self, store: JobStore, job_id: str, actor: str) -> None:
         self.store, self.job_id, self.actor = store, job_id, actor
+        self.lines: dict[str, int] = {}
+
+    def _key(self, context: Any, tool: Any) -> str:
+        return getattr(context, "tool_call_id", None) or tool.name
 
     async def on_tool_start(self, context: RunContextWrapper, agent: Any, tool: Any) -> None:
-        self.store.add_event(self.job_id, self.actor, f"→ {tool.name}")
+        args = pretty_args(getattr(context, "tool_arguments", "") or "")
+        self.lines[self._key(context, tool)] = self.store.add_event(
+            self.job_id, self.actor, f"→ {tool.name}", detail=clip(f"Asked:\n{args}") if args else "")
+
+    async def on_tool_end(self, context: RunContextWrapper, agent: Any, tool: Any, result: object) -> None:
+        seq = self.lines.pop(self._key(context, tool), None)
+        if seq is not None:
+            self.store.add_detail(self.job_id, seq, clip(f"Got back:\n{result}"))
 
 
 class RealWorkers:
@@ -103,8 +130,11 @@ async def run_job(job: Job, store: JobStore, *, run_agent=Runner.run, host=None,
             failures: list[str] = []
             for rnd in range(1, max_rounds + 1):
                 store.update(job.id, state="building" if rnd == 1 else "fixing", round=rnd)
-                say("builder", f"Round {rnd}: building." if rnd == 1 else f"Round {rnd}: fixing {len(failures)} problem(s).")
-                built = await run_agent(crew.builder, builder_input(job.spec, failures, job.change),
+                told = builder_input(job.spec, failures, job.change)
+                store.add_event(job.id, "builder",
+                                f"Round {rnd}: building." if rnd == 1 else f"Round {rnd}: fixing {len(failures)} problem(s).",
+                                detail=f"What the builder was told:\n\n{told}")
+                built = await run_agent(crew.builder, told,
                                         hooks=ActivityHooks(store, job.id, "builder"), max_turns=MAX_TURNS)
                 summary = str(built.final_output)
                 say("builder", summary)

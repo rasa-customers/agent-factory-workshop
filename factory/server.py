@@ -182,11 +182,16 @@ def build_server(store: JobStore, runner: Runner, *, port: int = 8800) -> FastMC
             if store.get(job_id) is None:
                 return
             async for ev in store.subscribe(job_id):
-                yield f"data: {json.dumps({'ts': ev.ts, 'actor': ev.actor, 'text': ev.text})}\n\n"
+                yield sse_line(ev)
 
         return StreamingResponse(stream(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
     return mcp
+
+
+def sse_line(ev) -> str:
+    """One activity-page event: the line, what's behind it, and its position (a later detail updates that line)."""
+    return f"data: {json.dumps({'ts': ev.ts, 'actor': ev.actor, 'text': ev.text, 'detail': ev.detail, 'seq': ev.seq})}\n\n"
 
 
 def main() -> None:

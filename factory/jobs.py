@@ -19,6 +19,8 @@ class Event:
     ts: float
     actor: Literal["factory", "builder", "checker"]
     text: str
+    detail: str = ""   # what's behind the line (arguments, results, the builder's brief); the page folds it away
+    seq: int = -1      # the line's position in the job, so a later detail updates the same line
 
 
 @dataclass
@@ -48,7 +50,7 @@ class JobStore:
         self._subs: dict[str, set[asyncio.Queue[Event]]] = {}
         for f in self.root.glob("*.json"):
             d = json.loads(f.read_text())
-            d["events"] = [Event(**e) for e in d["events"]]
+            d["events"] = [Event(**{**e, "seq": i}) for i, e in enumerate(d["events"])]
             job = Job(**d)
             if job.state not in ("passed", "failed"):  # this process can't resume a build another one started
                 job.state = "failed"
@@ -81,10 +83,20 @@ class JobStore:
                 if (state is None or j.state == state) and (kind is None or j.kind == kind)]
         return max(jobs, key=lambda j: j.created, default=None)
 
-    def add_event(self, job_id: str, actor: str, text: str) -> None:
+    def add_event(self, job_id: str, actor: str, text: str, detail: str = "") -> int:
         job = self._jobs[job_id]
-        ev = Event(ts=time.time(), actor=actor, text=text)  # type: ignore[arg-type]
+        ev = Event(ts=time.time(), actor=actor, text=text, detail=detail, seq=len(job.events))  # type: ignore[arg-type]
         job.events.append(ev)
+        self._save(job)
+        for q in self._subs.get(job_id, ()):
+            q.put_nowait(ev)
+        return ev.seq
+
+    def add_detail(self, job_id: str, seq: int, more: str) -> None:
+        """Append to a line's detail (a tool's result arriving after its arguments) and resend that line."""
+        job = self._jobs[job_id]
+        ev = job.events[seq]
+        ev.detail = f"{ev.detail}\n\n{more}" if ev.detail else more
         self._save(job)
         for q in self._subs.get(job_id, ()):
             q.put_nowait(ev)

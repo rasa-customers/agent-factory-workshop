@@ -28,6 +28,14 @@
   li { padding:6px 0; border-bottom:1px dashed var(--line); white-space:pre-wrap; word-break:break-word; }
   li.tool { color:var(--muted); font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:14px; }
   li.ok { color:var(--ok); } li.bad { color:var(--bad); }
+  details > summary { cursor:pointer; list-style:none; }
+  details > summary::-webkit-details-marker { display:none; }
+  details > summary::before { content:'▸'; display:inline-block; width:1.1em; color:var(--muted); transition:transform .15s; }
+  details[open] > summary::before { transform:rotate(90deg); }
+  details > summary:hover { color:var(--text); }
+  details pre { margin:8px 0 4px 1.1em; padding:10px 12px; max-height:24em; overflow:auto; background:var(--bg);
+                border:1px solid var(--line); border-radius:8px; color:var(--muted); white-space:pre-wrap;
+                font:13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
   #factory { grid-column:1 / -1; min-height:auto; }
   #factory ol { max-height:9em; }
   .error { grid-column:1/-1; background:#2a1414; border:1px solid #5a2626; border-radius:12px; padding:14px 16px; display:none; }
@@ -51,15 +59,28 @@
   const base = location.pathname.replace(/\/$/, '');
   const lists = {builder: document.querySelector('#builder ol'), checker: document.querySelector('#checker ol'),
                  factory: document.querySelector('#factory ol')};
+  const lines = {};  // seq → <li>, so a tool's result fills in the line its call started
+  function fill(li, ev) {
+    const wasOpen = li.querySelector('details')?.open;
+    li.replaceChildren();
+    if (!ev.detail) { li.textContent = ev.text; return; }
+    const d = document.createElement('details'), s = document.createElement('summary'), pre = document.createElement('pre');
+    s.textContent = ev.text; pre.textContent = ev.detail; d.open = !!wasOpen;
+    d.append(s, pre); li.append(d);
+  }
   function add(ev) {
     if (ev.text.startsWith('__state__')) { refresh(); return; }
-    const li = document.createElement('li');
-    li.textContent = ev.text;
+    const known = ev.seq >= 0 && lines[ev.seq];
+    const li = known || document.createElement('li');
+    fill(li, ev);
+    if (known) return;
+    if (ev.seq >= 0) lines[ev.seq] = li;
     if (ev.text.startsWith('→')) li.className = 'tool';
     if (ev.text.startsWith('✓')) li.className = 'ok';
     if (ev.text.startsWith('✗')) li.className = 'bad';
     const ol = lists[ev.actor] || lists.factory;
-    ol.appendChild(li); ol.scrollTop = ol.scrollHeight;
+    const atBottom = ol.scrollHeight - ol.scrollTop - ol.clientHeight < 40;
+    ol.appendChild(li); if (atBottom) ol.scrollTop = ol.scrollHeight;
   }
   async function refresh() {
     const r = await fetch(base + '/state'); if (!r.ok) return;

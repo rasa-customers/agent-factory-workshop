@@ -190,3 +190,24 @@ async def test_a_restore_puts_an_old_build_live_without_building_or_checking(sto
     assert j.state == "passed" and calls["builder_inputs"] == []
     assert host.promoted[0] == "dashboard"
     assert (tmp_path / "ws" / restore.id / "static" / "index.html").read_text() == "<h1>old one</h1>"
+
+
+async def test_each_round_line_expands_to_what_the_builder_was_told(job, store, tmp_path):
+    run_agent, _ = scripted(report(False), report(True))
+    done, _ = await go(job, store, run_agent, tmp_path)
+    rounds = [e for e in done.events if e.text.startswith("Round ")]
+    assert "A flight dashboard with a gate panel." in rounds[0].detail
+    assert "missing" in rounds[1].detail  # the checker's evidence, sent back to the builder
+
+
+async def test_tool_lines_expand_to_arguments_then_result(store):
+    from factory.pipeline import ActivityHooks
+    job = store.create("dashboard", "spec")
+    hooks = ActivityHooks(store, job.id, "checker")
+    ctx = SimpleNamespace(tool_call_id="c1", tool_arguments='{"message": "Will I make my meeting?"}')
+    tool = SimpleNamespace(name="talk_to_assistant")
+    await hooks.on_tool_start(ctx, None, tool)
+    await hooks.on_tool_end(ctx, None, tool, "Yes, with 12 minutes to spare.")
+    [ev] = store.get(job.id).events
+    assert ev.text == "→ talk_to_assistant"
+    assert "Will I make my meeting?" in ev.detail and "12 minutes to spare" in ev.detail

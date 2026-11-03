@@ -88,3 +88,14 @@ def test_latest_links_give_the_activity_page_then_the_result(store):
     links = http.get("/jobs/latest/links").json()["links"]
     assert links[0] == {"title": "Open it", "url": "http://localhost:8600/"}
     assert links[1]["title"] == "Watch the build"
+
+
+
+def test_event_stream_sends_detail_and_line_number():
+    import json as _json
+    from factory.jobs import Event
+    from factory.server import sse_line
+    line = sse_line(Event(ts=1.0, actor="builder", text="Round 1: building.", detail="SPEC: a dashboard", seq=0))
+    assert line.startswith("data: ") and line.endswith("\n\n")
+    ev = _json.loads(line[6:])
+    assert ev["text"] == "Round 1: building." and ev["detail"] == "SPEC: a dashboard" and ev["seq"] == 0
